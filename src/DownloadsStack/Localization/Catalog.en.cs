@@ -1,0 +1,50 @@
+namespace DownloadsStack.Localization;
+
+/// <summary>Every catalog carries the same keys; English is the fallback for anything missing.</summary>
+internal static partial class Catalog
+{
+    public static readonly Dictionary<string, string> En = new()
+    {
+        ["Tray_Tooltip"] = "Recent files · Downloads Stack",
+        ["Tray_Open"] = "Open the list · Downloads Stack",
+        ["Tray_Close"] = "Close the list · Downloads Stack",
+        ["Menu_Settings"] = "Settings",
+        ["Menu_Exit"] = "Exit",
+        ["Settings_Title"] = "Settings — Downloads Stack",
+        ["Settings_Heading"] = "Your folders",
+        ["Settings_ListName"] = "Connected folders",
+        ["Settings_AddFolder"] = "+ Add folder",
+        ["Settings_Remove"] = "Remove",
+        ["Settings_Retry"] = "Retry",
+        ["Settings_Done"] = "Done",
+        ["Settings_AddDownloads"] = "+ Downloads",
+        ["Settings_PickFolder"] = "Add folder",
+        ["Settings_SaveFailed"] = "Change not saved: {0}",
+        ["List_Name"] = "Recent files",
+        ["Empty_NoSources"] = "Add a folder in settings",
+        ["Empty_Reading"] = "Reading folders…",
+        ["Empty_AllUnavailable"] = "The selected folders are unavailable",
+        ["Empty_NoFiles"] = "No files in the selected folders yet",
+        ["Unavailable_Count"] = "Unavailable folders: {0}",
+        ["Source_Downloads"] = "Downloads (system folder)",
+        ["Source_Ready"] = "Available",
+        ["Source_Probing"] = "Checking the folder…",
+        ["Source_Denied"] = "No access to the folder",
+        ["Source_Unavailable"] = "Folder unavailable: {0}",
+        ["Error_Settings"] = "Could not read or save the settings: {0}",
+        ["Error_SettingsShape"] = "Invalid settings structure.",
+        ["Error_SettingsCorrupt"] = "The settings are damaged. Backup: {0}. Default settings restored.",
+        ["Error_SettingsRead"] = "Could not read the settings: {0}. Default settings are in use and your file was left unchanged.",
+        ["Error_Shortcut"] = "Could not create the shortcut: {0}",
+        ["Error_IndexShape"] = "Invalid index.",
+        ["Error_IndexEntry"] = "Invalid index entry.",
+        ["Error_IndexCorrupt"] = "The date index is damaged and will be rebuilt. Your files were not changed.",
+        ["Error_IndexRead"] = "Could not read the date index. The list was restored from file creation dates: {0}",
+        ["Error_IndexSave"] = "Could not save the date index: {0}",
+        ["Error_IndexFlush"] = "The index was not saved before the process exited.",
+        ["Error_FileMissing"] = "The file no longer exists.",
+        ["Error_DownloadsMissing"] = "Could not find the “Downloads” folder.",
+        ["Error_WindowMissing"] = "The list window is unavailable.",
+        ["Shortcut_Description"] = "A single list of recent files from the folders you choose",
+    };
+}

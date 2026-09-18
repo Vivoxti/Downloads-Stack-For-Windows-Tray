@@ -1,0 +1,50 @@
+<Window x:Class="DownloadsStack.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:DownloadsStack.Controls" xmlns:loc="clr-namespace:DownloadsStack.Localization"
+        Title="Downloads Stack" Style="{StaticResource {x:Type Window}}" Background="Transparent" AllowsTransparency="True" Foreground="{StaticResource TextBrush}" Icon="Assets/app.ico" Width="392" Height="260" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False">
+    <Window.Resources><BooleanToVisibilityConverter x:Key="BooleanVisibility"/></Window.Resources>
+    <Border x:Name="FlyoutSurface" Background="Transparent" Padding="10" RenderTransformOrigin="0.5,1" Opacity="0">
+        <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="FlyoutScale"/><TranslateTransform x:Name="FlyoutOffset"/></TransformGroup></Border.RenderTransform>
+        <Grid>
+            <ListBox x:Name="FileList" AutomationProperties.Name="{Binding [List_Name], Source={x:Static loc:Loc.Text}}" FocusVisualStyle="{x:Null}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                     PreviewMouseLeftButtonDown="OnMouseDown" PreviewMouseLeftButtonUp="OnMouseUp" PreviewMouseMove="OnMouseMove" PreviewMouseRightButtonDown="OnRightPress" PreviewMouseRightButtonUp="OnRightClick">
+                <!-- No ScrollViewer: keyboard and mouse cannot scroll hidden items into view. -->
+                <ListBox.Template><ControlTemplate TargetType="ListBox"><ItemsPresenter/></ControlTemplate></ListBox.Template>
+                <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                    <Setter Property="Height" Value="46"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="AutomationProperties.Name" Value="{Binding Name}"/><Setter Property="ToolTip" Value="{Binding FullPath}"/>
+                    <Setter Property="ToolTipService.InitialShowDelay" Value="1000"/>
+                    <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
+                    <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+                    <EventSetter Event="ToolTipOpening" Handler="PathToolTipOpening"/><EventSetter Event="MouseEnter" Handler="RowMouseEnter"/><EventSetter Event="MouseLeave" Handler="RowMouseLeave"/>
+                    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+                        <!-- A 1/255 alpha hit surface keeps the entire row draggable on a layered HWND. -->
+                        <Border x:Name="Row" Background="#01000000" BorderThickness="1" BorderBrush="Transparent" CornerRadius="9" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/></Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="controls:FileRowState.IsContextTarget" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="#7599E9"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate></Setter.Value></Setter>
+                </Style></ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate><DataTemplate><Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="38"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Image x:Name="FileIcon" Width="24" Height="24" Source="{Binding Icon}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform><TransformGroup><ScaleTransform/><TranslateTransform/></TransformGroup></Image.RenderTransform>
+                    </Image>
+                    <Grid Grid.Column="1" CacheMode="BitmapCache">
+                    <Canvas Height="22" VerticalAlignment="Center" IsHitTestVisible="False">
+                    <Border Width="{Binding BackdropWidth, ElementName=FileLabel}" Height="22" Background="#D9101114" CornerRadius="8">
+                        <Border.Effect><BlurEffect Radius="6" RenderingBias="Quality"/></Border.Effect>
+                    </Border>
+                    </Canvas>
+                    <controls:FileNameText x:Name="FileLabel" Margin="8,0" FileName="{Binding Name}" FontSize="13" Foreground="#FAFAFC" VerticalAlignment="Center">
+                        <controls:FileNameText.Effect><DropShadowEffect Color="Black" BlurRadius="3" ShadowDepth="1" Opacity="0.85"/></controls:FileNameText.Effect>
+                    </controls:FileNameText>
+                    </Grid>
+                </Grid>
+                </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="{Binding EmptyText}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16" Visibility="{Binding IsEmpty, Converter={StaticResource BooleanVisibility}}"/>
+        </Grid>
+    </Border>
+</Window>
+

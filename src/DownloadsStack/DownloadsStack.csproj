@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/app.ico</ApplicationIcon>
+    <AssemblyName>DownloadsStack</AssemblyName>
+    <AssemblyTitle>Downloads Stack</AssemblyTitle>
+    <Product>Downloads Stack</Product>
+    <Description>Downloads Stack</Description>
+    <StartupObject>DownloadsStack.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup><Resource Include="Assets/app.ico" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets/tray.ico" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets/tray-active.ico" /></ItemGroup>
+  <ItemGroup><Using Remove="System.Windows.Forms"/><Using Remove="System.Drawing"/></ItemGroup>
+  <!-- Copy for shortcuts without declaring the embedded WPF resource as Content. -->
+  <Target Name="CopyShortcutIconToOutput" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/app.ico" DestinationFiles="$(TargetDir)DownloadsStack.App.ico" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyShortcutIconToPublish" AfterTargets="Publish">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/app.ico" DestinationFiles="$(PublishDir)DownloadsStack.App.ico" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="NamePublishedApplication" AfterTargets="Publish" Condition="'$(UseAppHost)' != 'false'">
+    <Move SourceFiles="$(PublishDir)DownloadsStack.exe" DestinationFiles="$(PublishDir)Downloads Stack.exe" />
+  </Target>
+</Project>

@@ -1,0 +1,5 @@
+<Application x:Class="DownloadsStack.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <ResourceDictionary Source="Theme.xaml"/>
+    </Application.Resources>
+</Application>
