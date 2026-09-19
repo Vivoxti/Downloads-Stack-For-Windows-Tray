@@ -512,6 +512,9 @@ heuristics dislike, and nothing here says how a given scanner will treat it.
 
 ## An installer for one user or for all — 19.09.2026
 
+> Superseded the same day by "An ordinary per-machine installer" below, after the wizard was clicked
+> through for the first time. The scope choice was never reachable; the package is per-machine only.
+
 The package now declares `Scope="perUserOrMachine"` and carries WiX's `WixUI_Advanced` wizard. Both branches
 were installed and uninstalled on this machine with a stub payload, which builds in seconds and exercises
 exactly the parts under test — the folder each branch resolves, the registry root, where the Start menu
@@ -563,3 +566,44 @@ took handing the path to `explorer.exe`.
 welcome page, the licence, the two radio buttons or the Browse dialog, and no one has seen how the pages
 look. The per-machine branch has also only been installed by the machine's own administrator, not by a
 standard user answering a UAC prompt with someone else's credentials.
+
+
+## An ordinary per-machine installer — 19.09.2026
+
+Clicking through the wizard found three faults that no amount of silent installing had: the pages ran in a
+strange order with the folder hidden behind an "Advanced" button on the licence page, choosing "for all
+users" still offered an AppData path, and browsing to a folder installed into that folder rather than into
+a `Downloads Stack` inside it.
+
+The middle one is the interesting one. `WixUI_Advanced`'s Next button on the scope dialog carries seven
+control events, and this is the first of them:
+
+    Ordering 1:  WixAppFolder = "WixPerUserFolder"   when:  1 AND NOT Privileged
+
+A package started by a double click is not elevated, so the answer is put back to "only for me" before any
+of the events that read it: `ALLUSERS` is cleared, `APPLICATIONFOLDER` comes from the per-user branch, and
+the wizard moves on to the features page. The per-machine option is only honoured when msiexec is already
+running elevated. No condition of ours could have fixed that, which is why the previous section's work is
+superseded rather than corrected.
+
+The package is now `Scope="perMachine"` with `WixUI_InstallDir`, and the browsed folder is the parent of
+the application's own. Verified by installing and uninstalling the built package:
+
+| | `APPLICATIONFOLDER` resolved to | uninstall |
+|---|---|---|
+| Default | `C:\Program Files\Downloads Stack\` | nothing left |
+| `INSTALLPARENTFOLDER=C:\DownloadsStackParentTest` | `C:\DownloadsStackParentTest\Downloads Stack\` | nothing left |
+
+Every install and uninstall returned 0. The default landed in the 64-bit Program Files, not the (x86) one,
+and the chosen-folder case left no loose files in the parent — the count of files directly inside it was
+zero. A folder chosen in the wizard reaches the package as `INSTALLPARENTFOLDER`, which is what passing it
+on the command line does, so the second row is the browse case.
+
+The page order was read out of the package rather than watched: `WelcomeDlg` → `LicenseAgreementDlg` (on
+`LicenseAccepted = "1"`) → `InstallDirDlg` → `VerifyReadyDlg`.
+
+**Not checked:** the pages themselves, again. Nobody has clicked through this wizard either; what is
+verified is where its properties end up, not how it looks. Upgrading from the per-user installs that
+versions 1.0.0 to 1.1.0 left behind is also unchecked, and is not expected to work: Windows Installer scopes
+upgrade detection, so a per-machine package will not find a per-user product. Those have to be removed
+through Installed apps first.

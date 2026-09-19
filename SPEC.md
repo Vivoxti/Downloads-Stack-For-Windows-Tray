@@ -289,6 +289,9 @@ The package takes responsibility for what it can do reliably: the files, a Start
 
 ### Installing for one user or for all — 19.09.2026
 
+> Superseded the same day by "An ordinary per-machine installer" below. The choice described here could not
+> be made to work; the package is per-machine only.
+
 At the user's request of 19.09.2026 the installer offers what most Windows programs offer: an install for
 everybody under Program Files, a folder that can be chosen, and a wizard rather than a silent install. The
 package therefore declares `Scope="perUserOrMachine"` and uses WiX's `WixUI_Advanced` dialog set.
@@ -311,3 +314,25 @@ portable copy has nobody else to provide it.
 
 The startup entry stays per-user in both, because it is a per-user decision: installing for all users puts
 the program on the machine, it does not start it for everybody.
+
+
+### An ordinary per-machine installer — 19.09.2026
+
+The wizard from the section above was clicked through and three things were wrong with it, so the design
+changed rather than the conditions.
+
+The choice of scope could not work at all. `WixUI_Advanced`'s Next button runs
+`WixAppFolder = "WixPerUserFolder"` when `NOT Privileged` before it reads the answer, so a package started
+by a double click — never elevated — puts the choice back to "only for me", clears `ALLUSERS` and resolves
+an AppData path. The option is only honoured when msiexec is already elevated, which nobody does by hand.
+
+So `Scope="perMachine"` and `WixUI_InstallDir`: Windows elevates the package itself, the default is
+`C:\Program Files\Downloads Stack`, and the pages run welcome, licence, folder, install — the order the
+complaint was about, since Advanced put its licence and its "Advanced" button on one page and hid the
+folder behind it. Anyone who wants the application without administrator rights has the portable build,
+which is a better answer to that requirement than a per-user install of four hundred files.
+
+The folder the wizard browses to is the parent of the application's own. Windows Installer's browse dialog
+replaces the entire path with what is picked, so browsing to `D:\Tools` would install into `D:\Tools`
+itself; with the parent as the target, the application always lands in a `Downloads Stack` folder
+underneath whatever was chosen.
