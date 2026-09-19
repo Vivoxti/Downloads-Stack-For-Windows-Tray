@@ -18,7 +18,7 @@ public class FileRulesTests
     [InlineData(FileAttributes.System)]
     public void SpecialAttributesExcluded(FileAttributes attributes) => Assert.False(FileRules.Include("file.txt", attributes));
     [Theory]
-    [InlineData("Нулевой файл.txt")]
+    [InlineData("Zero length file.txt")]
     [InlineData("a.tmp.txt")]
     [InlineData("file")]
     public void OrdinaryNamesIncluded(string name) => Assert.True(FileRules.Include(name, FileAttributes.Normal));

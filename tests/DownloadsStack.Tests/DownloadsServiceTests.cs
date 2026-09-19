@@ -18,7 +18,7 @@ public class DownloadsServiceTests
     public async Task WatcherTracksFinalFileRenameEditAndDeleteWhileKeepingDates()
     {
         using var files = new TestDirectory(); using var data = new TestDirectory();
-        var file = files.File("старый.txt", ""); var creation = DateTime.UtcNow.AddYears(-1); File.SetCreationTimeUtc(file, creation);
+        var file = files.File("original.txt", ""); var creation = DateTime.UtcNow.AddYears(-1); File.SetCreationTimeUtc(file, creation);
         files.File("ignored.CRDOWNLOAD"); Directory.CreateDirectory(Path.Combine(files.Path, "child")); File.WriteAllText(Path.Combine(files.Path, "child", "nested.txt"), "");
         using var service = new DownloadsService(new(data.Path));
         var channel = Channel.CreateUnbounded<DownloadsSnapshot>(); service.Updated += s => channel.Writer.TryWrite(s);
@@ -28,8 +28,8 @@ public class DownloadsServiceTests
         File.AppendAllText(file, "changed");
         var edited = await WaitAsync(channel.Reader, s => s.Items.Count == 1 && s.Items[0].LastWriteTimeUtc != initial.Items[0].LastWriteTimeUtc);
         Assert.Equal(creation, edited.Items[0].EffectiveDateUtc);
-        var renamed = Path.Combine(files.Path, "готовый.txt"); File.Move(file, renamed);
-        var afterRename = await WaitAsync(channel.Reader, s => s.Items.Any(i => i.Name == "готовый.txt"));
+        var renamed = Path.Combine(files.Path, "renamed.txt"); File.Move(file, renamed);
+        var afterRename = await WaitAsync(channel.Reader, s => s.Items.Any(i => i.Name == "renamed.txt"));
         Assert.Equal(creation, afterRename.Items[0].EffectiveDateUtc);
         var part = files.File("new.part", "data"); var before = DateTime.UtcNow; File.Move(part, Path.Combine(files.Path, "new.txt"));
         var added = await WaitAsync(channel.Reader, s => s.Items.Count == 2);

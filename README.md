@@ -1,128 +1,130 @@
 # Downloads Stack
 
-Приложение Windows 11: иконка в системном трее рядом с часами раскрывает компактный список последних файлов из выбранных папок.
+A Windows 11 application: an icon in the system tray, next to the clock, opens a compact list of the newest files from the folders you choose.
 
-[![Релиз](https://img.shields.io/github/v/release/Vivoxti/Downloads-Stack-For-Windows-Tray?label=%D1%80%D0%B5%D0%BB%D0%B8%D0%B7&color=25BC96)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest)
-[![Загрузки](https://img.shields.io/github/downloads/Vivoxti/Downloads-Stack-For-Windows-Tray/total?label=%D0%B7%D0%B0%D0%B3%D1%80%D1%83%D0%B7%D0%BE%D0%BA)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases)
-[![Сборка](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml/badge.svg)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml)
-[![Лицензия: MIT](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Vivoxti/Downloads-Stack-For-Windows-Tray?label=release&color=25BC96)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Vivoxti/Downloads-Stack-For-Windows-Tray/total?label=downloads)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases)
+[![Build](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml/badge.svg)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Windows 11 · .NET 10 · WPF · самодостаточная сборка, ставить ничего заранее не нужно.
+Windows 11 · .NET 10 · WPF · a self-contained build, with nothing to install beforehand.
 
-Панель полностью прозрачна: видны только системные иконки файлов и их имена. Один клик открывает файл, перетаскивание отдаёт настоящий Shell data object, правый клик — классическое контекстное меню Проводника. Папок-источников может быть несколько, «Загрузки» подключены по умолчанию.
+The panel is fully transparent: all you see are the system file icons and the file names. One click opens a file, dragging hands over a real Shell data object, a right click brings up the classic File Explorer context menu. There can be several source folders; Downloads is connected by default.
 
-## Установка
+## Install
 
-Готовые сборки — на [странице релизов](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest). Обе поставки несут одно и то же приложение, выбор только в способе установки.
+Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest). Both packages carry the same application — the only choice is how it gets onto the machine.
 
-| Поставка | Файл | Что делает |
+| Package | File | What it does |
 | --- | --- | --- |
-| Установщик | `DownloadsStack-<версия>-win-x64.msi` | Ставит в `%LOCALAPPDATA%\Programs\Downloads Stack` для текущего пользователя: без прав администратора, без UAC. Кладёт ярлык в меню «Пуск» и запускает приложение по окончании. Удаляется через «Установленные приложения». |
-| Портативная | `DownloadsStack-<версия>-portable-win-x64.zip` | Распакуйте куда угодно и запустите `Downloads Stack.exe`. В системе не появляется ничего, пока вы сами не включите автозапуск. |
+| Installer | `DownloadsStack-<version>-win-x64.msi` | Installs into `%LOCALAPPDATA%\Programs\Downloads Stack` for the current user: no administrator rights, no UAC prompt. Adds a Start menu shortcut and launches the application when it finishes. Removed through Installed apps. |
+| Portable | `DownloadsStack-<version>-portable-win-x64.zip` | Unpack it anywhere and run `Downloads Stack.exe`. Nothing appears anywhere in the system until you turn on startup yourself. |
 
-Приложение не подписано сертификатом, поэтому SmartScreen при первом запуске покажет предупреждение: «Подробнее» → «Выполнить в любом случае».
+The application is not signed with a certificate, so SmartScreen will warn you on the first run: More info → Run anyway.
 
-Автозапуск вместе с Windows в обеих поставках включается одинаково — галочкой в настройках; см. раздел ниже.
+Starting with Windows works the same way in both packages — a checkbox in the settings; see the section below.
 
-## Запуск
+## Running it
 
-Запустите `Downloads Stack.exe` — из установленной папки, из распакованного архива или из `artifacts/win-x64` после локальной сборки. При первом запуске окно не появляется — приложение работает в трее. Если Windows поместила значок под стрелку скрытых значков, перетащите его к часам. Закрепление в основной панели задач не требуется.
+Run `Downloads Stack.exe` — from the installed folder, from the unpacked archive, or from `artifacts/win-x64` after a local build. No window appears on the first run: the application lives in the tray. If Windows put the icon under the hidden-icons arrow, drag it out next to the clock. Pinning it to the main taskbar is not required.
 
-- ЛКМ по значку — показать/убрать список.
-- Escape, Alt+F4 и клик снаружи — спрятать список, оставить приложение работающим.
-- ПКМ по значку — список, настройки папок, выход.
-- Повторный запуск EXE раскрывает уже работающий экземпляр.
-- `--show` — сразу показать панель при первом запуске (для проверки).
-- `--quit`, `--autostart-on`, `--autostart-off` — команды без окна: завершить работающий экземпляр, включить и выключить автозапуск. См. «Автозапуск вместе с Windows».
-- Выход из меню полностью завершает процесс и убирает значок.
+- Left click on the icon shows and hides the list.
+- Escape, Alt+F4 and a click outside hide the list and leave the application running.
+- Right click on the icon opens the list, the folder settings and Exit.
+- Running the EXE again opens the list of the instance that is already running.
+- `--show` opens the panel immediately on the first run (useful for checking).
+- `--quit`, `--autostart-on`, `--autostart-off` are windowless commands: stop the running instance, turn startup on and off. See "Starting with Windows".
+- Exit in the menu ends the process completely and removes the icon.
 
-Перед запуском новой сборки завершите прежний экземпляр через «Выход». Иначе повторный запуск активирует уже работающую версию.
+Before you start a new build, close the previous instance through Exit. Otherwise running it again just activates the version that is already there.
 
-## Список и настройки
+## The list and its settings
 
-Полностью прозрачная панель без размытия, затемнения, рамки и тени окна. Видны только системные иконки файлов и названия с расширением. Подсветка строки появляется при наведении/выборе. У текста есть небольшая тень для читаемости на фоне рабочего стола. Полный путь доступен в подсказке строки. Настройки сохраняют отдельное оформление Acrylic.
+A fully transparent panel: no blur, no dimming, no border, no window shadow. All that is visible are the system file icons and the names with their extensions. A row is highlighted on hover and on selection. The text carries a slight shadow so it stays readable against the desktop. The full path is available in the row's tooltip. The settings window keeps its own Acrylic styling.
 
-В настройках есть галочка «Аппаратное ускорение графики», по умолчанию выключенная. Без неё приложение занимает около 16 МБ в трее и 30 МБ после раскрытия списка вместо 62 и 106 МБ: почти вся эта разница — Direct3D-устройство, которое WPF создаёт вместе с первым окном и больше не отдаёт. Цена — процессорное время на анимациях раскрытия и скрытия, и только на них. Переключение применяется после перезапуска приложения.
+The settings have a "Hardware graphics acceleration" checkbox, off by default. Without it the application takes about 16 MB in the tray and 30 MB with the list open, instead of 62 and 106 MB: nearly all of that difference is the Direct3D device that WPF creates along with the first window and never gives back. The price is CPU time during the open and close animations, and only there. The switch takes effect after a restart.
 
-По умолчанию подключены системные «Загрузки». Настройки папок доступны по правому клику на значке в трее. Удаление источника не удаляет файлы. Из всех выбранных папок выбираются последние файлы без обхода подпапок. Панель показывает только полностью помещающиеся строки, без прокрутки. Первый файл выбранного порядка находится внизу, ближе всего к значку в трее. Заголовка, кнопок и нижней панели нет.
+The system Downloads folder is connected by default. The folder settings are one right click on the tray icon away. Removing a source does not delete any files. The newest files are picked from all the selected folders, without walking into subfolders. The panel shows only the rows that fit completely, and does not scroll. The first file of the chosen order sits at the bottom, closest to the tray icon. There is no title, no buttons and no bottom bar.
 
-Ползунок «Файлов в списке» задаёт, сколько самых новых файлов показывает панель: от 1 до 20, по умолчанию 10 — ровно столько помещалось раньше. Панель перестраивается сразу, под ползунком. Последнее слово остаётся за монитором: если строки не помещаются в рабочую область, их будет меньше запрошенного. Значение хранится в `settings.json` как `maxVisibleItems`.
+The "Files in the list" slider sets how many of the newest files the panel shows: from 1 to 20, 10 by default — exactly as many as used to fit. The panel rebuilds itself immediately, right under the slider. The monitor gets the last word: if the rows do not fit into the work area, there will be fewer of them than you asked for. The value is stored in `settings.json` as `maxVisibleItems`.
 
-В настройках есть выпадающий список «Сортировка» и галочка «Обратный порядок». Сортировать можно по дате добавления, имени, типу (расширению), дате изменения, дате создания и дате доступа. «Дата добавления» — прежний порядок приложения: когда файл появился в папке; остальные даты читаются из самого файла, поэтому «дата создания» может отличаться от неё у перемещённого файла. Даты идут от новых к старым, имя и тип — по алфавиту, а галочка переворачивает список целиком. Выбор применяется сразу, без перезапуска и без повторного чтения папок, и хранится в `settings.json` как `sortBy` и `sortReversed`. Порядок по дате доступа обновляется при следующем сканировании папки: Windows не присылает уведомление о чтении файла, и приложение за ним не следит.
+The settings also have a "Sort" dropdown and a "Reverse order" checkbox. You can sort by date added, name, type (extension), date modified, date created and date accessed. "Date added" is the application's original order — when the file showed up in the folder; the other dates are read from the file itself, which is why "date created" can differ from it for a file that was moved. Dates run newest first, name and type run alphabetically, and the checkbox flips the whole list. The choice takes effect at once, without a restart and without re-reading the folders, and is stored in `settings.json` as `sortBy` and `sortReversed`. Ordering by date accessed catches up on the next folder scan: Windows sends no notification when a file is read, and the application does not watch for it.
 
-Один левый клик/Enter открывает файл. ПКМ выделяет строку рамкой и открывает контекстное меню; иконка остаётся увеличенной, пока меню открыто. Перетаскивание передаёт реальный Shell data object; копирование/перенос зависит от принимающего приложения. Во время drag панель не скрывается при потере фокуса. Контекстное меню файла позволяет открыть его или показать в Проводнике.
+A single left click, or Enter, opens the file. A right click outlines the row and opens the context menu; the icon stays enlarged while the menu is open. Dragging hands over a real Shell data object; whether that copies or moves is up to the receiving application. The panel does not hide on focus loss during a drag. The file's context menu can open the file or show it in File Explorer.
 
-Это список файлов выбранных папок, не журнал скачиваний всех браузеров. Незавершённые загрузки отфильтровываются эвристически. Для старых файлов дата создания приблизительно определяет порядок; для новых сохраняется дата обнаружения. Настройки и индекс: `%LOCALAPPDATA%\DownloadsStack`.
+This is a list of the files in the folders you chose, not a download log across all browsers. Unfinished downloads are filtered out heuristically. For older files the creation date approximates the order; for new ones the discovery date is kept. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
 
-## Автозапуск вместе с Windows
+### Readable names on any wallpaper
 
-В настройках есть группа «Запуск» с галочкой «Запускать вместе с Windows». Она пишет значение `DownloadsStack` в `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`: полный путь к текущему exe в кавычках и ключ `--autostart`. Прав администратора не требуется, служба и запланированная задача не создаются, а запись видна в «Автозагрузке» диспетчера задач наравне с остальными программами. Работает одинаково в портативной и в установленной поставке.
+Each name gets its own dark backdrop, fitted to the visible text, with blurred edges. The panel's own background stays transparent.
 
-Источник правды — сам реестр, а не `settings.json`. Тот же переключатель есть в диспетчере задач, и копия значения в файле настроек начала бы врать в ту же секунду, когда пользователь им воспользуется. Поэтому окно настроек перечитывает реестр при каждом открытии.
+The opacity of that backdrop is set by a slider in the settings, from 0 to 100% (85% by default). The panel repaints immediately, no restart needed; the value is stored in `settings.json` as `backdropOpacity`.
 
-Windows умеет отключать запись, не удаляя её: команда остаётся на месте, а ответ пользователя хранится отдельно, в `Explorer\StartupApproved\Run`. В этом случае галочка честно остаётся включённой — запись-то есть, — а под ней появляется строка о том, что Windows отключил автозапуск в диспетчере задач и включить обратно можно только там. Своё решение в диспетчере задач приложение не переписывает.
+The whole area of the panel, including the gaps between rows and the margin around them, takes the mouse: in a layered window a pixel without alpha lets the cursor through to the window behind, so the surface is filled with an all but invisible `#01000000` background.
 
-Портативную копию, перенесённую в другую папку, приложение чинит само: на старте оно сверяет путь из записи и, если такого файла больше нет, переписывает запись на себя. Если файл по старому пути на месте, запись не трогается — один запуск второй копии не должен забирать автозапуск у той, которую пользователь зарегистрировал.
+Once a drag finishes or is cancelled, the panel hides; the next click on the tray icon opens it again. The mouse capture is released before the native drag and after it. The full path appears only after 2 seconds of hovering over one row; moving to another row means another 2 seconds. Tooltips are off during a drag and on a hidden panel.
 
-Из скрипта то же самое делают команды без окна: `"Downloads Stack.exe" --autostart-on` и `--autostart-off`. Команда `--quit` завершает работающий экземпляр и возвращает управление только тогда, когда процесс действительно закрылся, — ею установщик освобождает exe перед заменой.
+### Thumbnails
 
-## Релизы: портативная версия и установщик
+For PNG, JPG/JPEG and MP4 the system thumbnail — the image itself, or a frame of the video — is shown instead of the generic icon. Loading happens in the background and only for visible files; if Windows cannot produce a thumbnail, the ordinary icon is shown. Row sizes and the hover animation are unchanged.
 
-`scripts/package.ps1` собирает из одной публикации обе поставки (перед этим прогоняет тесты, `-SkipTests` их пропускает):
+### The Shell context menu
 
-- `artifacts/DownloadsStack-<версия>-portable-win-x64.zip` — внутри одна папка «Downloads Stack». Распаковать куда угодно и запустить exe; до первого включения автозапуска в системе не появляется ничего.
-- `artifacts/DownloadsStack-<версия>-win-x64.msi` — установка для текущего пользователя в `%LOCALAPPDATA%\Programs\Downloads Stack`, без прав администратора и без запроса UAC. Ставит ярлык в меню «Пуск» с тем же `AppUserModel.ID`, что и у приложения, и запускает его по окончании. Обновление поверх установленной версии сначала просит работающий экземпляр закрыться (`--quit`) и поэтому не требует перезагрузки.
+A right click on a file opens the real classic Windows Shell context menu, with the system commands and the installed extensions. On Windows 11 this is the "Show more options" menu, not File Explorer's new compact one. The outline and the enlarged icon stay while the menu is open. Escape dismisses the menu; once a command runs, the list hides.
 
-Автозапуск в обеих поставках включается одинаково — галочкой в настройках. Установщик ключ `Run` не трогает вообще, и это измеренное решение, а не упущение: изменение реестра, сделанное внутри транзакции Windows Installer, эту транзакцию не пережило — ни запись самого пакета, ни запись программы, которую пакет запускал из custom action. Подробности и цифры в `CHECKS.md`.
+The native file menu follows the Windows app theme: dark in the dark theme, light in the light one. The setting is checked before every open, so no restart is needed after the theme changes. Under high contrast the system styling is kept.
 
-Отсюда следует и обратное: удаление программы не убирает запись автозапуска, если пользователь её включал. Выключите галочку до удаления либо уберите строку в «Автозагрузке» диспетчера задач; запись, указывающая на удалённый файл, Windows просто игнорирует.
+A right click on the tray icon opens a compact menu with "Folder settings" and "Exit". It has no separators, and uses a #202020 background, a thin border and padding in the style of the Windows dark system menu.
+
+### Animations and the tray icon
+
+On hover the icon grows to 135% with a soft spring and lifts by 2 DIP, then returns over 120 ms. Background highlighting of the row on hover and selection is gone; the local backdrop behind the name stays. The path appears after 1 second on each file. The panel appears with a slight lift and scale over 170 ms and disappears over 95 ms. Reopening quickly cancels a close that has not finished. During a drag all movement of the panel is stopped.
+
+Animations ask the current monitor for its refresh rate. Content is cached while opening and closing; the text backdrops are cached as well, so the blur is not recomputed every frame. The actual frame rate is up to WPF/DWM and the load, especially for a transparent window.
+
+The tray icon shows the state: white when the list is closed, green #25BC96 when it is open. On close — including Escape, a click outside and the end of a drag — the colour goes back to white. The icon's tooltip switches between "Open the list" and "Close the list". The application icon remains separate.
+
+## Starting with Windows
+
+The settings have a "Startup" group with a "Start with Windows" checkbox. It writes a `DownloadsStack` value into `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`: the full path to the current exe in quotes plus the `--autostart` switch. No administrator rights are required, no service and no scheduled task are created, and the entry shows up in Task Manager's Startup apps alongside every other program. It works identically in the portable and in the installed package.
+
+The registry itself is the source of truth, not `settings.json`. The same switch exists in Task Manager, and a copy of the value in the settings file would start lying the second the user touched it. That is why the settings window re-reads the registry every time it opens.
+
+Windows can disable the entry without deleting it: the command stays where it is, and the user's answer is kept separately, under `Explorer\StartupApproved\Run`. In that case the checkbox honestly stays on — the entry is there, after all — and a line appears underneath it explaining that Windows disabled startup in Task Manager and that it can only be turned back on there. The application does not overwrite that decision.
+
+A portable copy that was moved to another folder repairs itself: on startup it compares the path in the entry and, if that file is gone, rewrites the entry to point at itself. If the file at the old path is still there, the entry is left alone — one run of a second copy should not take startup away from the one the user registered.
+
+From a script the windowless commands do the same: `"Downloads Stack.exe" --autostart-on` and `--autostart-off`. The `--quit` command stops the running instance and only returns once the process has actually closed — that is how the installer frees the exe before replacing it.
+
+## Releases: portable build and installer
+
+`scripts/package.ps1` builds both packages from a single publish (running the tests first; `-SkipTests` skips them):
+
+- `artifacts/DownloadsStack-<version>-portable-win-x64.zip` — one "Downloads Stack" folder inside. Unpack it anywhere and run the exe; nothing appears in the system until startup is turned on for the first time.
+- `artifacts/DownloadsStack-<version>-win-x64.msi` — a per-user install into `%LOCALAPPDATA%\Programs\Downloads Stack`, without administrator rights and without a UAC prompt. It puts a Start menu shortcut with the same `AppUserModel.ID` the application uses, and launches it at the end. Upgrading over an installed version first asks the running instance to close (`--quit`), which is why it needs no reboot.
+
+Startup is turned on the same way in both packages — the checkbox in the settings. The installer does not touch the `Run` key at all, and that is a measured decision rather than an oversight: a registry change made inside a Windows Installer transaction did not survive that transaction — neither one written by the package itself, nor one written by the program the package launched from a custom action. The details and the numbers are in `CHECKS.md`.
+
+The reverse follows from it: uninstalling does not remove the startup entry if the user had turned it on. Clear the checkbox before uninstalling, or remove the line in Task Manager's Startup apps; an entry pointing at a deleted file is simply ignored by Windows.
 
 ```powershell
 msiexec /i "artifacts\DownloadsStack-1.0.0-win-x64.msi" /qn
 msiexec /x "artifacts\DownloadsStack-1.0.0-win-x64.msi" /qn
 ```
 
-## Сборка
+## Building
 
-Требуются Windows 11 и .NET SDK 10. Self-contained сборка включает runtime.
+Windows 11 and the .NET SDK 10 are required. The self-contained build includes the runtime.
 
 ```powershell
 dotnet test -c Release
 dotnet publish src/DownloadsStack/DownloadsStack.csproj -c Release -r win-x64 --self-contained true -p:PublishTrimmed=false -o artifacts/win-x64
 ```
 
-Publish выполняет crossgen (`PublishReadyToRun`), поэтому занимает заметно дольше обычной сборки; на старте приложения это экономит большую часть JIT. WinForms не используется: значок трея зарегистрирован через `Shell_NotifyIcon` напрямую.
+Publish runs crossgen (`PublishReadyToRun`), so it takes noticeably longer than an ordinary build; at application startup that saves most of the JIT work. WinForms is not used: the tray icon is registered through `Shell_NotifyIcon` directly.
 
-Установщик собирается WiX 6, подключённым как локальный инструмент репозитория: `dotnet tool restore` — это весь его toolchain, `package.ps1` делает это сам. Разметка пакета — `packaging/DownloadsStack.wxs`. Номер версии живёт в одном месте, в `<Version>` файла `src/DownloadsStack/DownloadsStack.csproj`: оттуда его берут и имя архива, и логика обновления установщика.
+The installer is built by WiX 6, wired up as a local tool of the repository: `dotnet tool restore` is its entire toolchain, and `package.ps1` does that itself. The package markup is `packaging/DownloadsStack.wxs`. The version number lives in one place, in `<Version>` in `src/DownloadsStack/DownloadsStack.csproj`: both the archive name and the installer's upgrade logic read it from there.
 
-`Theme.xaml` — общие стили. `TrayService` — иконка трея. `MainWindow` — раскрытие/скрытие, позиционирование, drag. `DownloadsService` — наблюдение за папками. `ShellService` — файловые операции Windows.
+`Theme.xaml` holds the shared styles. `TrayService` is the tray icon. `MainWindow` covers opening and closing, positioning and dragging. `DownloadsService` watches the folders. `ShellService` performs the Windows file operations.
 
-Проверки и ограничения — в `CHECKS.md`. `scripts/smoke-lifecycle.ps1` переписан под режим трея: старт без окна, доставка настоящего клика по значку после повторной регистрации в оболочке, раскрытие списка вторым запуском, закрытие обратно в трей, один экземпляр, ярлык с AppUserModel.ID и отсутствие записей в `app.log` за прогон. Он же проверяет команды установщика: `--quit` действительно останавливает процесс, `--autostart-on` пишет ожидаемую строку в `Run`, `--autostart-off` её убирает. Прежнее значение этой строки на машине скрипт возвращает на место, чем бы прогон ни кончился.
-
-
-
-
-Читаемость названий: под каждым именем отдельная тёмная подложка, подогнанная под видимый текст, с размытыми краями. Общий фон панели прозрачен.
-
-Непрозрачность этой подложки настраивается ползунком в настройках, от 0 до 100% (по умолчанию 85%). Панель перекрашивается сразу, перезапуск не нужен; значение хранится в `settings.json` как `backdropOpacity`.
-
-Вся площадь панели, включая зазоры между строками и поле по краям, принимает мышь на себя: у layered-окна пиксель без альфы пропускает курсор в окно позади, поэтому поверхность залита практически невидимым фоном `#01000000`.
-
-После завершения или отмены перетаскивания панель скрывается; следующий клик значка трея открывает её заново. Захват мыши освобождается перед нативным drag и после него. Полный путь появляется только после 2 секунд наведения на одну строку; при переходе на другую строку снова требуется 2 секунды. Во время drag и на скрытой панели подсказки отключены.
-
-Анимации: при наведении иконка увеличивается до 135% с мягкой пружиной и приподнимается на 2 DIP, затем возвращается за 120 мс. Подсветка фона строки при наведении/выборе убрана; локальная подложка названия сохранена. Путь появляется через 1 секунду на каждом файле. Панель появляется с лёгким подъёмом/масштабированием за 170 мс и исчезает за 95 мс. При быстром повторном открытии незавершённое закрытие отменяется. Во время drag движение всей панели остановлено.
-
-Значок в трее показывает состояние: белый — список закрыт, зелёный #25BC96 — открыт. При закрытии (включая Escape, клик снаружи и завершение drag) цвет возвращается к белому. Подсказка значка меняется на «Открыть список»/«Закрыть список». Иконка приложения остаётся отдельной.
-
-
-
-Для PNG, JPG/JPEG и MP4 вместо типовой иконки показывается системная миниатюра: изображение или кадр видео. Загрузка в фоне только для видимых файлов; если Windows не может получить миниатюру, отображается обычная иконка. Размеры строк и анимация наведения сохранены.
-
-
-ПКМ по файлу открывает настоящее классическое контекстное меню Windows Shell с системными командами и установленными расширениями. На Windows 11 это меню уровня «Показать дополнительные параметры», а не новое компактное меню Проводника. Пока меню открыто, сохраняются рамка и увеличенная иконка. Escape отменяет меню; после выполнения команды список скрывается.
-
-Нативное меню файла следует теме приложений Windows: в тёмной теме тёмное, в светлой светлое. Настройка проверяется перед каждым раскрытием, перезапуск после смены темы не требуется. При высокой контрастности сохраняется системное оформление.
-
-Анимации запрашивают частоту текущего монитора. Во время открытия/закрытия содержимое кэшируется; подложки текста также кэшируются, чтобы не пересчитывать размытие на каждом кадре. Фактическая частота зависит от WPF/DWM и нагрузки, особенно у прозрачного окна.
-
-ПКМ по значку в трее открывает компактное меню с пунктами «Настройки папок» и «Выход». Оно не содержит разделителей, использует фон #202020, тонкую рамку и отступы в стиле системного тёмного меню Windows.
+The checks and the limitations are in `CHECKS.md`. `scripts/smoke-lifecycle.ps1` was rewritten for tray mode: start without a window, delivery of a real click on the icon after re-registering with the shell, opening the list from a second launch, closing back into the tray, a single instance, the shortcut with its AppUserModel.ID, and no entries in `app.log` over the run. It also checks the installer's commands: that `--quit` really stops the process, that `--autostart-on` writes the expected line into `Run`, and that `--autostart-off` removes it. Whatever way the run ends, the script puts that line's previous value on the machine back.

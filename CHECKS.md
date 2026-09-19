@@ -1,475 +1,474 @@
-# Проверки исправлений — 17.09.2026
+# Checks on the fixes — 17.09.2026
 
-- `dotnet test -c Release`: 33 пройдены, 0 ошибок, 0 пропусков. Покрывают существующую файловую логику, индекс, настройки, наблюдение, системные иконки и CF_HDROP.
-- Первичная Release-сборка новой версии прошла. Итоговый publish фиксируется при поставке.
-- Приложение запущено: первый запуск оставил процесс работающим без доступного обычного окна, как предусмотрено режимом трея.
-- Интерактивная проверка через computer-use остановлена пользователем физическим Escape. Внешний вид на экране, клики значка, скрытие/повторное раскрытие, настройки, прокрутка и drag в новой панели НЕ отмечены как проверенные.
+- `dotnet test -c Release`: 33 passed, 0 failed, 0 skipped. They cover the existing file logic, the index, the settings, watching, system icons and CF_HDROP.
+- The first Release build of the new version succeeded. The final publish is recorded at delivery.
+- The application was started: the first run left the process running with no ordinary window available, exactly as tray mode intends.
+- The interactive check through computer-use was stopped by the user with a physical Escape. The on-screen appearance, the icon clicks, hiding and reopening, the settings, scrolling and dragging in the new panel are NOT marked as checked.
 
-Остаётся проверить вручную:
+Still to be checked by hand:
 
-1. Значок есть в трее (возможно под стрелкой), обычной кнопки приложения нет. ЛКМ показывает и прячет панель, ПКМ открывает меню.
-2. Escape/клик снаружи/Alt+F4 скрывают панель, процесс и значок остаются. «Выход» удаляет значок и завершает процесс.
-3. Настройки не закрываются из-за потери фокуса родителя; выбор папки работает; кнопки, строки и меню читаемы.
-4. Перенос файлов в Проводник, Ctrl/Shift и отмена Escape; панель не исчезает посреди drag. Существующие тесты CF_HDROP не заменяют эту проверку.
-5. DPI 100/150/200%, два монитора и автоскрытие taskbar. Нет обрезанных названий/кнопок и белых стандартных меню.
-6. После перезапуска Explorer значок восстанавливается; повторный запуск приложения не создаёт второй экземпляр.
+1. The icon is in the tray (possibly under the arrow) and there is no ordinary application button. A left click shows and hides the panel, a right click opens the menu.
+2. Escape, a click outside and Alt+F4 hide the panel while the process and the icon stay. Exit removes the icon and ends the process.
+3. The settings do not close because the parent lost focus; the folder picker works; buttons, rows and menus are readable.
+4. Moving files into File Explorer, Ctrl/Shift and cancelling with Escape; the panel does not vanish mid-drag. The existing CF_HDROP tests do not replace this check.
+5. DPI 100/150/200%, two monitors and an auto-hiding taskbar. No clipped names or buttons and no white default menus.
+6. After an Explorer restart the icon comes back; running the application again does not create a second instance.
 
-Прежний отчёт о taskbar-минимизации и старый smoke-lifecycle.ps1 не подтверждают работоспособность режима трея.
+The earlier report on taskbar minimising and the old smoke-lifecycle.ps1 do not confirm that tray mode works.
 
-## Исправление фона и Acrylic
+## The background and Acrylic fix
 
-Self-contained Release publish выполнен успешно без предупреждений и ошибок. Панель и настройки используют прозрачный фон HWND и Desktop Acrylic через DWM (атрибут 38, значение 3); текст задан явно светлым. При ошибке API используется тёмная непрозрачная подложка. Новая сборка запускается и остаётся в трее. Визуальное подтверждение размытия пока не выполнено: инструмент захвата не получил доступного раскрытого окна. Регрессия файловой логики этим изменением не затронута; полный прогон 33 тестов относится к предыдущему исправлению.
+The self-contained Release publish succeeded with no warnings and no errors. The panel and the settings use a transparent HWND background and Desktop Acrylic through DWM (attribute 38, value 3); the text is set explicitly light. On an API failure an opaque dark backdrop is used. The new build starts and stays in the tray. Visual confirmation of the blur has not been done yet: the capture tool did not get an open window it could reach. The file logic is untouched by this change; the full run of 33 tests belongs to the previous fix.
 
-## Упрощение панели
+## Simplifying the panel
 
-Release self-contained publish выполнен успешно без предупреждений/ошибок после остановки прежнего экземпляра, блокировавшего DLL. Удалены заголовок/футер/кнопки. Панель берёт только самые новые помещающиеся строки и разворачивает их: самый новый внизу. Шаблон ListBox не содержит ScrollViewer; фокусная пунктирная рамка отключена. Визуальная приёмка этой версии пока не выполнена. Проверить отсутствие частичных строк, порядок последних файлов, отсутствие прокрутки и доступ к настройкам через трей.
+The Release self-contained publish succeeded with no warnings or errors, once the previous instance holding the DLL was stopped. The title, the footer and the buttons are gone. The panel takes only the newest rows that fit and unfolds them with the newest at the bottom. The ListBox template contains no ScrollViewer; the dotted focus rectangle is off. Visual acceptance of this version has not been done. Check that there are no partial rows, that the newest files come in order, that there is no scrolling, and that the settings are reachable from the tray.
 
-## Полностью прозрачный фон
+## A fully transparent background
 
-Self-contained Release publish успешен без предупреждений/ошибок. Основное окно использует per-pixel transparency, без WindowChrome/DWM Acrylic/рамки; непрозрачность текста и иконок сохранена. У строк альфа 1/255 для взаимодействия со всей площадью, подсветка только при наведении/выборе. Визуальная и drag-приёмка этой версии пока не выполнена; проверить читаемость на светлом фоне и перетаскивание за пустую часть строки.
+The self-contained Release publish succeeded with no warnings or errors. The main window uses per-pixel transparency, with no WindowChrome, no DWM Acrylic and no border; text and icons stay opaque. The rows carry alpha 1/255 so that their whole area is interactive, and highlighting happens only on hover or selection. Visual and drag acceptance of this version has not been done; check readability against a light background and dragging from an empty part of a row.
 
-## Подложки названий
+## Name backdrops
 
-Проверен рендер настоящего WPF-шаблона на светлом фоне (artifacts/label-preview.png): короткое имя, обычное имя и длинное с сокращением. Подложка соответствует длине текста; длинный текст ограничен шириной строки и сохраняет .mp4. Release self-contained publish успешен. Рендер не подтверждает drag и взаимодействие с треем.
+The real WPF template was rendered against a light background (artifacts/label-preview.png): a short name, an ordinary name, and a long one that gets shortened. The backdrop matches the length of the text; long text is bounded by the row width and keeps its .mp4. The Release self-contained publish succeeded. The render does not confirm dragging or the interaction with the tray.
 
-## Drag и пути — 18.09.2026
+## Drag and paths — 18.09.2026
 
-Полный dotnet test -c Release: 34 пройдены, 0 ошибок/пропусков. Новый STA-тест создаёт настоящее WPF-окно с тестовым элементом, подменяет только нативную drag-операцию, проверяет Dragging/Hidden/Visible, освобождённый захват мыши, игнорирование toggle во время drag, немедленное открытие/закрытие после возврата из native drag и параметры задержки подсказки 2000/0. Пользовательские папки не сканируются, индекс не сохраняется. Тест не подтверждает реальные OLE drop-операции в Проводник и фактическое время появления tooltip. Release self-contained publish успешен без предупреждений/ошибок.
+A full dotnet test -c Release: 34 passed, 0 failed, 0 skipped. The new STA test creates a real WPF window with a test element, substitutes only the native drag operation, and checks Dragging/Hidden/Visible, the released mouse capture, the tray toggle being ignored during a drag, an immediate open and close after the native drag returns, and the tooltip delay parameters 2000/0. No user folders are scanned and no index is saved. The test does not confirm real OLE drops into File Explorer or the actual time it takes a tooltip to appear. The Release self-contained publish succeeded with no warnings or errors.
 
-## Исправление ошибки BAML — 18.09.2026
+## The BAML error fix — 18.09.2026
 
-Ошибка воспроизведена на self-contained EXE: WPF искал Assets/app.ico на диске из-за одновременной декларации этого ресурса как Content под другим именем. Удалена декларация Content; отдельная иконка ярлыка копируется targets Build/Publish, app.ico остаётся только встроенным WPF-ресурсом. Проверка готового artifacts/win-x64/Downloads Stack.exe --check-ui успешно загрузила ресурсы Application, главное окно, настройки и иконку трея. Полный журнал исключений теперь содержит внутреннюю причину и стек. scripts/publish.ps1 автоматически запускает проверку ресурсов опубликованного EXE.
+The error was reproduced on the self-contained EXE: WPF was looking for Assets/app.ico on disk because the same resource was also declared as Content under a different name. The Content declaration was removed; the separate shortcut icon is copied by the Build/Publish targets, and app.ico remains purely an embedded WPF resource. Running the finished artifacts/win-x64/Downloads Stack.exe --check-ui loaded the Application resources, the main window, the settings and the tray icon successfully. The full exception log now carries the inner cause and the stack. scripts/publish.ps1 runs the resource check on the published EXE automatically.
 
-## Анимации — 18.09.2026
+## Animations — 18.09.2026
 
-Расширен STA-тест: delay пути 1000/0; запуск закрытия, немедленное повторное открытие, ожидание анимационных часов, проверка что старое закрытие не прячет заново открытое окно; завершение нормального закрытия и повторное открытие. Тест использует Application только с ресурсами, контролирует foreground для изоляции от рабочего стола и подменяет нативный drag. Точечный тест прошёл. Внешний вид hover-анимации в живом окне пока не проверен.
+The STA test was extended: path delay 1000/0; start a close, reopen immediately, wait on the animation clock, and check that the old close does not hide the freshly reopened window; then let a normal close finish and reopen. The test uses an Application with resources only, controls the foreground to isolate itself from the desktop, and substitutes the native drag. The targeted test passed. How the hover animation looks in a live window has not been checked yet.
 
-## Реакция трея
+## The tray's reaction
 
-Добавлен ресурс tray-active.ico (голубой вариант белой стрелки с сохранением альфа), 8 размеров. TrayService обновляет иконку и текст по событию изменения состояния окна; переходы Visible↔Dragging не мигают. Проверка опубликованного EXE загружает обе иконки трея. Визуальная смена значка в реальном трее пока не проверена.
+A tray-active.ico resource was added (a blue variant of the white arrow with its alpha preserved), in 8 sizes. TrayService updates the icon and the text from the window state change event; Visible↔Dragging transitions do not flicker. The check on the published EXE loads both tray icons. The visual change of the icon in a real tray has not been checked yet.
 
-Регрессионный WPF-тест проверяет открытие одним нажатием/отпусканием, отсутствие выбора на ЛКМ, подавление открытия после drag, рамку ПКМ и удержание масштаба 1.35 при открытом меню без наведения на строку.
-
-
-Иконка приложения заменена исходником ChatGPT Image 18 сент. 2026 г., 00_31_17.png; ICO содержит размеры 16–256 px. Активная иконка трея окрашена точно в #25BC96 с сохранением прозрачности; RGB всех видимых пикселей проверен во всех 8 размерах. Обычная иконка трея сохранена.
-
-Системные миниатюры: тесты сверяют реальные цвета двух разных PNG/JPG/JPEG одного расширения, повторное использование кэша, замороженные BitmapSource, красный кадр из MP4 H.264 и переход повреждённого MP4 к иконке. Тестовый MP4 2275 байт создан ffmpeg; runtime приложения ffmpeg не использует. Визуальная приёмка на пользовательском экране не выполнена.
+A WPF regression test covers opening on one press and release, no selection on a left click, the open being suppressed after a drag, the right-click outline, and the 1.35 scale being held while the menu is open without the cursor being over the row.
 
 
-Название продукта и описание EXE: Downloads Stack. Опубликованный apphost переименован в Downloads Stack.exe без изменения внутреннего имени сборки; проверка загрузки WPF-ресурсов опубликованной версии прошла. Существующий ярлык обновлён на новое имя EXE.
+The application icon was replaced from the source ChatGPT Image 18 Sep 2026, 00_31_17.png; the ICO contains sizes from 16 to 256 px. The active tray icon is coloured exactly #25BC96 with its transparency preserved; the RGB of every visible pixel was verified in all 8 sizes. The ordinary tray icon is unchanged.
 
-Нативное контекстное меню: интеграционный STA-тест получает настоящий IContextMenu для файла с кириллицей/пробелами/&, находит системные canonical verbs copy и properties, проверяет освобождение HMENU. WPF-тест проверяет удержание увеличения/рамки и отключение подсказки во вложенном цикле меню; отмена оставляет список открытым. Визуальные подменю сторонних расширений пока не проверены.
+System thumbnails: the tests compare the real colours of two different PNG/JPG/JPEG files of the same extension, cache reuse, frozen BitmapSource instances, a red frame from an H.264 MP4, and a corrupted MP4 falling back to the icon. The 2,275-byte test MP4 was created with ffmpeg; the application's runtime does not use ffmpeg. Visual acceptance on the user's screen has not been done.
 
-Тема системного меню: сборка без предупреждений; проверка published --check-ui дополнительно вызывает NativeMenuTheme на HWND WPF. Пользовательские настройки темы только читаются. Визуальное сравнение с Проводником и переключение темы пользователем не выполнены.
 
-Плавность: Windows сообщает DISPLAY1=240 Гц, DISPLAY2=120 Гц. Изолированный WPF-пробник на 10 строках, прозрачном окне, 3-секундной анимации масштаба: прежнее окно default=42.0 обновления/с; только DesiredFrameRate=240 — 42.4; дополнительно BitmapCache поверхности — 113.8. Это частота изменения свойства по CompositionTarget.Rendering, не счётчик физически показанных кадров/DWM Present; режим и нагрузка влияют на результат. В приложении добавлены кэш переходов, постоянный кэш текста и адаптация DesiredFrameRate.
+The EXE's product name and description: Downloads Stack. The published apphost was renamed to Downloads Stack.exe without changing the internal assembly name; the WPF resource loading check on the published version passed. The existing shortcut was updated to the new EXE name.
 
-Повторный замер опубликованной версии с кэшем текстовых подложек и поверхности перехода: выбранный монитор определён как 240 Гц, целевая частота 240; 368 изменений за 3.002 с = 122.6 обновления WPF/с. Физический FPS экрана не измерялся; стабильные 240 FPS не подтверждены. Все 40 регрессионных тестов и проверка published ресурсов прошли.
+The native context menu: an STA integration test obtains a real IContextMenu for a file with Cyrillic, spaces and an ampersand in its name, finds the system canonical verbs copy and properties, and checks that the HMENU is released. A WPF test checks that the enlargement and the outline are held and the tooltip disabled inside the menu's nested loop, and that cancelling leaves the list open. Visual submenus from third-party extensions have not been checked yet.
 
-Меню трея: удалены «Последние файлы» и разделитель; добавлены отдельные стили TrayContextMenu/TrayMenuItem. WPF-тест проверяет ровно два пункта, их порядок, отсутствие Separator и цвет #202020.
+The system menu's theme: the build has no warnings; the published `--check-ui` check additionally calls NativeMenuTheme on a WPF HWND. The user's theme settings are only read. A visual comparison with File Explorer, and the user switching themes, were not done.
 
-## Стабильность, заикания и залипания состояний — 18.09.2026
+Smoothness: Windows reports DISPLAY1=240 Hz and DISPLAY2=120 Hz. An isolated WPF probe with 10 rows, a transparent window and a 3-second scale animation: the previous window at default gave 42.0 updates/s; with DesiredFrameRate=240 alone, 42.4; with BitmapCache on the surface as well, 113.8. That is the rate at which the property changes as seen through CompositionTarget.Rendering, not a count of frames physically shown or of DWM Presents; the mode and the load affect the result. The application gained a transition cache, a permanent text cache and an adaptive DesiredFrameRate.
 
-`dotnet test -c Release`: 49 пройдены, 0 ошибок, 0 пропусков. Self-contained Release publish и `--check-ui` успешны.
-`scripts/smoke-lifecycle.ps1` переписан под режим трея и снова является валидной приёмкой: старт без окна на экране,
-второй запуск раскрывает список у работающего экземпляра, закрытие окна прячет панель в трей и не завершает процесс,
-один экземпляр, ярлык с AppUserModel.ID, чистое завершение. За весь прогон приложение не записало в `app.log` ни байта.
-Отчёт — `artifacts/lifecycle-smoke.json`.
+A repeat measurement of the published version with the text backdrop and transition surface caches: the chosen monitor was detected as 240 Hz with a target rate of 240; 368 changes in 3.002 s = 122.6 WPF updates/s. The screen's physical FPS was not measured; a steady 240 FPS is not confirmed. All 40 regression tests and the published-resources check passed.
 
-Причины заиканий:
+The tray menu: "Recent files" and the separator were removed; separate TrayContextMenu/TrayMenuItem styles were added. A WPF test checks that there are exactly two items, their order, the absence of a Separator and the #202020 colour.
 
-1. Скан открывал отдельный handle (`CreateFileW` + `GetFinalPathNameByHandleW`) на каждый файл папки при каждом проходе,
-   а проход запускается на любую запись в наблюдаемой папке. Путь внутри уже разрешённой папки теперь составляется,
-   handle открывается только для reparse point.
-2. Снимок публиковался и индекс переписывался после каждого прохода и раз в секунду, пока файл догружался, —
-   панель пересобирала все строки несколько раз в секунду. Снимок публикуется только при реальном изменении,
-   индекс пишется только при изменении дат и без отступов.
-3. Секундное ожидание «устаканивания» выполнялось даже на папке со старыми файлами: каждый старт и каждое
-   раскрытие стоили лишнюю секунду. Ожидание включается, только если что-то писалось в последние 5 секунд.
-4. `FileList.ItemsSource` переназначался на каждый снимок: сбрасывались наведение, подсказки и измерение имён.
-   Строки пересоздаются только при изменении видимого списка.
-5. `Sources` очищался и заполнялся заново на каждом снимке — список папок в настройках моргал и терял выделение.
-   Обновляются только изменившиеся элементы.
+## Stability, stutters and stuck states — 18.09.2026
 
-Блокировки и гонки:
+`dotnet test -c Release`: 49 passed, 0 failed, 0 skipped. The self-contained Release publish and `--check-ui` succeeded.
+`scripts/smoke-lifecycle.ps1` was rewritten for tray mode and is a valid acceptance check again: start with no window on screen,
+a second launch opening the list of the running instance, closing the window hiding the panel into the tray without ending the process,
+a single instance, the shortcut with its AppUserModel.ID, a clean shutdown. Over the whole run the application wrote not one byte into `app.log`.
+The report is `artifacts/lifecycle-smoke.json`.
 
-6. Поток иконок и `Dispose` оба опустошали очередь, проигравший получал `ObjectDisposedException` в UI-потоке;
-   упавший поток превращал любой следующий запрос иконки в исключение. Очередь больше не освобождается из потока,
-   при его остановке все ожидания завершаются запасной иконкой.
-7. Публикация после остановки Dispatcher бросала `InvalidOperationException` из фонового потока.
-8. Меню трея не учитывалось в счётчике открытых меню, повторный ПКМ создавал второе меню, а «Настройки»
-   открывали модальное окно поверх незакрытого меню. Меню теперь одно, закрывается перед действием, «Выход» отложен.
-   Отдельно найдено и закрыто: позднее событие `Closed` заменённого меню обнуляло ссылку на его преемника,
-   после чего счётчик оставался ненулевым и панель больше никогда не закрылась бы.
-9. Клики по значку продолжают приходить внутри модального цикла — открывались вторые «Настройки»,
-   а панель раскрывалась под модальным окном.
-10. Второй запуск при сбое рукопожатия показывал пользователю окно ошибки; теперь только запись в лог.
+The causes of the stutters:
 
-Данные и сообщения:
+1. The scan opened a separate handle (`CreateFileW` + `GetFinalPathNameByHandleW`) per file in the folder on every pass,
+   and a pass runs on any write inside a watched folder. A path inside an already resolved folder is now composed,
+   and a handle is opened only for a reparse point.
+2. The snapshot was published and the index rewritten after every pass and once a second while a file was still downloading —
+   the panel rebuilt every row several times a second. The snapshot is now published only on a real change,
+   and the index is written only when dates change, without indentation.
+3. The one-second "settle" wait ran even on a folder of old files: every start and every open cost an extra second.
+   The wait now kicks in only if something was written in the last 5 seconds.
+4. `FileList.ItemsSource` was reassigned on every snapshot: hover, tooltips and name measurements were reset.
+   Rows are recreated only when the visible list changes.
+5. `Sources` was cleared and refilled on every snapshot — the folder list in the settings blinked and lost its selection.
+   Only the items that changed are updated.
 
-11. Нечитаемый или занятый `settings.json` вылетал из загрузки, а при неудачной резервной копии мог быть перезаписан.
-    Файл не трогается, показывается сообщение (новый ключ `Error_SettingsRead` во всех 14 каталогах).
-12. `Error`/`HasError` не были привязаны ни к одному элементу: повреждённые настройки, сбой записи индекса и сбой
-    ярлыка не показывались нигде. Выведены в окно настроек; предупреждение снимается после успешной записи.
-13. Ярлык перезаписывался при каждом старте и на read-only установке сообщал об ошибке каждый раз.
-    Пишется, только если не указывает на текущий exe.
-14. Иконки брались 16 px и растягивались до 24 px в строке и до 32 px при наведении. Берётся крупная системная иконка.
+Locks and races:
 
-Новые тесты: отсутствие публикаций у устоявшейся папки и во время незавершённой загрузки, стоимость повторных
-сканов, отсутствие перезаписи индекса без изменений, сохранность файла настроек при ошибке чтения, повторное
-использование строк панели, учёт меню трея, ответ запасной иконкой после `Dispose`, альфа и ориентация эскизов.
+6. The icon thread and `Dispose` both drained the queue, and the loser got an `ObjectDisposedException` on the UI thread;
+   a crashed thread turned every subsequent icon request into an exception. The queue is no longer disposed from the thread,
+   and when it stops, every pending wait completes with the fallback icon.
+7. Publishing after the Dispatcher had stopped threw an `InvalidOperationException` from a background thread.
+8. The tray menu was not counted in the open-menu counter, so a second right click created a second menu, and Settings
+   opened a modal window on top of a menu that was still up. There is now one menu, it closes before the action, and Exit is deferred.
+   Found and closed separately: the late `Closed` event of a replaced menu nulled the reference to its successor,
+   after which the counter stayed non-zero and the panel would never have closed again.
+9. Clicks on the icon keep arriving inside the modal loop — a second Settings window opened, and the panel opened underneath the modal window.
+10. A second launch whose handshake failed showed the user an error window; now it only writes to the log.
 
-Не проверено: визуальная приёмка на 150/200% DPI и на втором мониторе, перетаскивание в Проводник,
-поведение после перезапуска Explorer.
+Data and messages:
 
-### Подчистка остатков выпиленной фичи
+11. An unreadable or locked `settings.json` fell out of loading, and could be overwritten if the backup copy failed.
+    The file is now left alone and a message is shown (a new `Error_SettingsRead` key in all 14 catalogs).
+12. `Error`/`HasError` were not bound to any element: corrupted settings, a failed index write and a failed shortcut
+    were shown nowhere. They are surfaced in the settings window, and the warning clears after a successful write.
+13. The shortcut was rewritten on every start and reported an error every time on a read-only installation.
+    It is written only if it does not already point at the current exe.
+14. Icons were taken at 16 px and stretched to 24 px in a row and to 32 px on hover. The large system icon is taken instead.
 
-Удалены недостижимые обработчики панели (`ShowHeaderMenu`, `Refresh`, `Exit`, `OpenSelected`, `RevealSelected`,
-`OpenSourceFolder`, `OpenSource`) — ни один не был привязан к XAML, — и всё, что жило только ради них:
-`ShellService.Reveal` и `ShellService.OpenFolder`, P/Invoke `SHParseDisplayName` и `SHOpenFolderAndSelectItems`,
-неиспользуемый `MonitorFromWindow`, свойство `DownloadItem.ParentPath`, свойство `MainViewModel.ConfiguredSources`,
-стили `IconButton` и `Separator` в `Theme.xaml`, строка `Error_FolderMissing` во всех 14 каталогах.
-`MenuOpened`/`MenuClosed` оставлены: они обслуживают меню трея и нативное меню файла.
+New tests: no publications from a settled folder or during an unfinished download, the cost of repeated scans,
+no index rewrite without changes, the settings file surviving a read failure, reuse of the panel's rows,
+the tray menu being counted, the fallback icon being returned after `Dispose`, and thumbnail alpha and orientation.
 
-Проверено: сборка без предупреждений, `EnforceCodeStyleInBuild` не находит неиспользуемых членов и using,
-скрипт сверки каталогов не находит осиротевших строк локализации, 49 тестов проходят,
-publish + `--check-ui` + lifecycle-smoke зелёные.
+Not checked: visual acceptance at 150/200% DPI and on a second monitor, dragging into File Explorer,
+behaviour after an Explorer restart.
 
-Следствие: перехода к папке из панели больше нет ни в каком виде — ПКМ по строке открывает только
-нативное меню Windows. Если такая команда нужна, её придётся добавлять как новую фичу с UI.
+### Cleaning up after a removed feature
 
-## Производительность и ресурсы — 19.09.2026
+Unreachable panel handlers were removed (`ShowHeaderMenu`, `Refresh`, `Exit`, `OpenSelected`, `RevealSelected`,
+`OpenSourceFolder`, `OpenSource`) — not one of them was bound in XAML — along with everything that existed only for them:
+`ShellService.Reveal` and `ShellService.OpenFolder`, the `SHParseDisplayName` and `SHOpenFolderAndSelectItems` P/Invokes,
+the unused `MonitorFromWindow`, the `DownloadItem.ParentPath` property, the `MainViewModel.ConfiguredSources` property,
+the `IconButton` and `Separator` styles in `Theme.xaml`, and the `Error_FolderMissing` string in all 14 catalogs.
+`MenuOpened`/`MenuClosed` were kept: they serve the tray menu and the native file menu.
 
-`dotnet test -c Release`: 60 пройдены, 0 ошибок, 0 пропусков. Self-contained Release publish и `--check-ui`
-успешны; `scripts/publish.ps1` целиком занимает около минуты. `scripts/smoke-lifecycle.ps1` зелёный,
-`loggedBytesDuringRun = 0`. Отчёт — `artifacts/lifecycle-smoke.json`.
+Checked: the build has no warnings, `EnforceCodeStyleInBuild` finds no unused members or usings,
+the catalog reconciliation script finds no orphaned localization strings, 49 tests pass,
+and publish + `--check-ui` + lifecycle-smoke are green.
 
-Все измерения сделаны на этой машине: две сборки запускались по очереди, чередуясь, и сравниваются медианы.
-Это рабочий стол с браузерами и другими приложениями, поэтому абсолютные значения времени плавают;
-чередование убирает медленный дрейф, но не делает числа воспроизводимыми на другом железе.
+A consequence: there is no way to jump to a folder from the panel any more, in any form — a right click on a row opens
+only the native Windows menu. If such a command is wanted, it will have to be added as a new feature with its own UI.
 
-### Повторное чтение папки
+## Performance and resources — 19.09.2026
 
-Стенд: `DownloadsService` на временной папке, 20 вызовов `Refresh()` после того, как папка устоялась;
-считаются `GC.GetTotalAllocatedBytes(precise: true)` и сборки нулевого поколения.
+`dotnet test -c Release`: 60 passed, 0 failed, 0 skipped. The self-contained Release publish and `--check-ui`
+succeeded; `scripts/publish.ps1` takes about a minute end to end. `scripts/smoke-lifecycle.ps1` is green with
+`loggedBytesDuringRun = 0`. The report is `artifacts/lifecycle-smoke.json`.
 
-| Файлов в папке | Выделено на проход, до | после |
+Every measurement was made on this machine: the two builds were run one after another, interleaved, and the medians compared.
+This is a desktop with browsers and other applications on it, so the absolute times drift;
+interleaving removes the slow drift but does not make the numbers reproducible on other hardware.
+
+### Re-reading a folder
+
+The bench: `DownloadsService` on a temporary folder, 20 calls to `Refresh()` after the folder had settled;
+`GC.GetTotalAllocatedBytes(precise: true)` and gen-0 collections are counted.
+
+| Files in the folder | Allocated per pass, before | after |
 |---|---|---|
-| 100 | 158 КБ | 2 КБ |
-| 1 000 | 1 553 КБ | 2 КБ |
-| 10 000 | 15 869 КБ | 2 КБ |
+| 100 | 158 KB | 2 KB |
+| 1,000 | 1,553 KB | 2 KB |
+| 10,000 | 15,869 KB | 2 KB |
 
-Оставшиеся 2 КБ — конечные автоматы `async`, они не зависят от размера папки. Сборок нулевого поколения
-за 20 проходов на 10 000 файлах: 41 до, 0 после. Первый скан 10 000 файлов: 103 мс и 20,2 МБ до, 78–94 мс
-и 7,2 МБ после. Постоянная занятая память управляемой кучи при 10 000 файлах: 12,2 МБ до, 5,7 МБ после;
-рабочий набор стенда 62,9 МБ до, 46,2 МБ после. Публикаций за 20 проходов по-прежнему ноль.
+The remaining 2 KB are the `async` state machines; they do not depend on the size of the folder. Gen-0 collections
+over 20 passes on 10,000 files: 41 before, 0 after. The first scan of 10,000 files: 103 ms and 20.2 MB before, 78–94 ms
+and 7.2 MB after. Steady managed-heap memory at 10,000 files: 12.2 MB before, 5.7 MB after; the bench's working
+set was 62.9 MB before and 46.2 MB after. Publications over the 20 passes are still zero.
 
-Регрессию закрывает тест `RescanningASettledFolderCostsNothingPerFile`: 2 000 файлов, 10 проходов,
-порог 1 МБ. Прежний код на этом же стенде выделял около 32 МБ. Параллельный запуск тестовых классов
-выключен: и этот тест, и прежние проверки времени измеряли бы тогда загрузку машины, а не код.
+The regression is covered by the `RescanningASettledFolderCostsNothingPerFile` test: 2,000 files, 10 passes,
+a 1 MB threshold. The previous code allocated about 32 MB on the same bench. Parallel execution of test classes
+is off: this test and the earlier timing checks would otherwise have been measuring the machine's load rather than the code.
 
-### Старт и простой
+### Startup and idle
 
-| Показатель | До | После |
+| Metric | Before | After |
 |---|---|---|
-| Панель на экране, `--show`, медиана из 12 чередующихся запусков | 687 мс | 628 мс |
-| То же, минимум | 639 мс | 595 мс |
-| CPU процесса к моменту показа + 1,2 с | 1 328 мс | 1 156 мс |
-| CPU процесса к простою в трее (10 с после запуска) | 1 188 мс | 953 мс |
-| Рабочий набор в трее, без панели | 140,6 МБ | 135,5 МБ |
-| Приватная память в трее, без панели | 86,3 МБ | 87,7 МБ |
-| Загруженных модулей в трее | 145 | 139 |
-| Размер publish | 173 МБ, 475 файлов | 142 МБ, 405 файлов |
+| Panel on screen, `--show`, median of 12 interleaved runs | 687 ms | 628 ms |
+| The same, minimum | 639 ms | 595 ms |
+| Process CPU by the time it is shown + 1.2 s | 1,328 ms | 1,156 ms |
+| Process CPU by the time it is idle in the tray (10 s after launch) | 1,188 ms | 953 ms |
+| Working set in the tray, panel closed | 140.6 MB | 135.5 MB |
+| Private memory in the tray, panel closed | 86.3 MB | 87.7 MB |
+| Modules loaded in the tray | 145 | 139 |
+| Publish size | 173 MB, 475 files | 142 MB, 405 files |
 
-Приватная память в простое практически не изменилась: WinForms занимал в основном разделяемые страницы кода,
-и выигрыш от его удаления виден в рабочем наборе, в числе модулей и в работе на старте, а не в приватных байтах.
+Private memory while idle barely moved: WinForms occupied mostly shared code pages, and the gain from removing it
+shows up in the working set, in the module count and in the work done at startup, not in private bytes.
 
-Разбивка старта снималась временной трассировкой (удалена): до изменений из 763 мс до показа панели
-191 мс приходилось на конструктор `MainWindow`, 218 мс на `InitializeAsync` (создание HWND и первичная
-инициализация композиции) и 158 мс на первый показ и отрисовку.
+The startup breakdown was taken with temporary tracing (since removed): before the changes, of the 763 ms before
+the panel appeared, 191 ms went to the `MainWindow` constructor, 218 ms to `InitializeAsync` (creating the HWND and
+the initial composition setup) and 158 ms to the first show and paint.
 
-`PublishReadyToRunComposite` проверен и отклонён. Первый запуск из папки, которую система ещё не читала:
-4 072–4 272 мс против 1 274–1 424 мс у обычного ReadyToRun и 1 439–1 518 мс у прежней сборки. На прогретом
-файле composite давал примерно 50 мс. Для приложения, которое стартует при входе в систему, это плохой обмен.
+`PublishReadyToRunComposite` was tested and rejected. A first run from a folder the system had not read yet:
+4,072–4,272 ms against 1,274–1,424 ms for ordinary ReadyToRun and 1,439–1,518 ms for the previous build. On a warm
+file, composite was worth about 50 ms. For an application that starts at sign-in that is a bad trade.
 
-### Значок трея
+### The tray icon
 
-`smoke-lifecycle.ps1` теперь находит скрытое окно трея по заголовку, шлёт ему широковещательное
-`TaskbarCreated`, а затем настоящее `WM_LBUTTONUP` в сообщении обратного вызова и ждёт появления панели —
-поле `trayIconSurvivesShellRestart`. Это проверяет и разбор `.ico`, и регистрацию, и повторную регистрацию,
-и доставку клика. Закрытие панели кликом по значку скриптом не проверяется: хост держит передний план,
-и панель может закрыться сама по деактивации раньше клика; вместо этого панель закрывается через `WM_CLOSE`.
+`smoke-lifecycle.ps1` now finds the hidden tray window by its title, sends it a broadcast
+`TaskbarCreated`, then a real `WM_LBUTTONUP` in the callback message, and waits for the panel to appear —
+the `trayIconSurvivesShellRestart` field. That exercises the `.ico` parsing, the registration, the re-registration
+and the delivery of the click. Closing the panel by clicking the icon is not checked by the script: the host holds
+the foreground, and the panel may close on deactivation before the click arrives; instead the panel is closed with `WM_CLOSE`.
 
-Тесты `TrayIconTests` разбирают настоящие `tray.ico`, `tray-active.ico` и `app.ico`, создают HICON на
-16/24/32/40/48 px и через `GetIconInfo`/`GetObject` проверяют, что растр имеет запрошенный размер и 32 бита
-на пиксель, то есть что выбрано изображение нужного размера, а не растянутое. Отсутствующий ресурс
-возвращает 0, а не молчаливо пустой значок.
+The `TrayIconTests` parse the real `tray.ico`, `tray-active.ico` and `app.ico`, create HICONs at
+16/24/32/40/48 px and use `GetIconInfo`/`GetObject` to check that the bitmap has the requested size and 32 bits
+per pixel — that is, that the image of the right size was chosen rather than a stretched one. A missing resource
+returns 0 rather than a silently empty icon.
 
-Отдельно исправлена сама проверка: `anchoredAboveTaskbar` сравнивал окно с рабочей областью **основного**
-монитора, тогда как панель открывается на мониторе под курсором. На втором мониторе проверка падала
-и на прежней сборке тоже. Теперь берётся рабочая область монитора самого окна.
+The check itself was fixed separately: `anchoredAboveTaskbar` compared the window against the work area of the **primary**
+monitor, whereas the panel opens on the monitor under the cursor. On a second monitor the check failed
+on the previous build too. It now takes the work area of the window's own monitor.
 
-### Не проверено
+### Not checked
 
-- Внешний вид значка в трее и его смена при открытой панели — человеком не смотрели.
-- Настоящий перезапуск Explorer: отправлено только сообщение `TaskbarCreated`, сам Explorer не перезапускался.
-- Визуальная приёмка на 150/200% DPI и на втором мониторе, перетаскивание в Проводник.
-- Ограничение предзагрузки иконок шестнадцатью строками проверено чтением кода, счётчика запросов к оболочке нет.
-- Смена цели символической ссылки внутри наблюдаемой папки без смены имени — путь в коде есть, теста нет.
+- How the tray icon looks and how it changes while the panel is open — nobody has looked at it.
+- A real Explorer restart: only the `TaskbarCreated` message was sent, Explorer itself was not restarted.
+- Visual acceptance at 150/200% DPI and on a second monitor, dragging into File Explorer.
+- Bounding icon prefetch to sixteen rows was verified by reading the code; there is no counter of requests to the shell.
+- Changing a symlink's target inside a watched folder without changing its name — the path exists in the code, there is no test.
 
-### Память: откуда 100 МБ и настройка рендеринга — 19.09.2026
+### Memory: where the 100 MB comes from, and the rendering setting — 19.09.2026
 
-Вопрос был поставлен так: «100 МБ для такой простой софтинки — слишком много». Замерено и разложено.
+The question was put as: "100 MB is too much for such a simple little program." It was measured and broken down.
 
-Сначала о том, какое число что значит. `Working Set` 135 МБ включает разделяемые страницы DLL;
-`Private Bytes` 87 МБ — всё закоммиченное, включая непрокачанное; в диспетчере задач видно
-`Private Working Set` — 62 МБ в трее и **106 МБ после первого раскрытия панели**, причём обратно
-не возвращается: замер через 45 секунд простоя дал 106,1 МБ.
+First, what each number means. A `Working Set` of 135 MB includes shared DLL pages;
+`Private Bytes` of 87 MB is everything committed, including what has never been paged in; what Task Manager shows is
+`Private Working Set` — 62 MB in the tray and **106 MB after the panel is opened once**, and it does not
+come back down: a measurement after 45 seconds of idling gave 106.1 MB.
 
-Два эталона, собранные и измеренные той же линейкой (self-contained, ReadyToRun, приватный рабочий набор):
+Two baselines, built and measured with the same ruler (self-contained, ReadyToRun, private working set):
 
 | | privateWS |
 |---|---|
-| .NET без WPF: скрытое Win32-окно и цикл сообщений | 3,7 МБ |
-| WPF `Application`, окна нет | 6,1 МБ |
-| WPF и одно окно | 54,2 МБ |
-| WPF и одно окно с `RenderMode.SoftwareOnly` | 10,7 МБ |
-| Downloads Stack в трее (было) | 61,4 МБ |
+| .NET without WPF: a hidden Win32 window and a message loop | 3.7 MB |
+| A WPF `Application` with no window | 6.1 MB |
+| WPF with one window | 54.2 MB |
+| WPF with one window and `RenderMode.SoftwareOnly` | 10.7 MB |
+| Downloads Stack in the tray (before) | 61.4 MB |
 
-Отсюда: весь код, данные, индекс, наблюдение за папками, кэш иконок, XAML и локализация — это
-61,4 − 54,2 ≈ **7 МБ**. Остальное появляется в момент создания первого окна WPF и приходится на
-Direct3D-устройство и драйвер видеокарты (`amdxn64.dll` — 38,9 МБ одного только отображённого кода).
+From which: all the code, the data, the index, the folder watching, the icon cache, the XAML and the localization amount to
+61.4 − 54.2 ≈ **7 MB**. The rest appears the moment WPF's first window is created and belongs to
+the Direct3D device and the graphics driver (`amdxn64.dll` — 38.9 MB of mapped code on its own).
 
-Тот же бинарник, отличается только режим рендеринга:
+The same binary, differing only in rendering mode:
 
-| | простой | после 10 раскрытий | CPU за 10 циклов |
+| | idle | after 10 opens | CPU over 10 cycles |
 |---|---|---|---|
-| Direct3D | 62 МБ | 106 МБ | 3,1–3,3 с |
-| `SoftwareOnly` | 17 МБ | 32–38 МБ | 4,4–5,7 с |
+| Direct3D | 62 MB | 106 MB | 3.1–3.3 s |
+| `SoftwareOnly` | 17 MB | 32–38 MB | 4.4–5.7 s |
 
-Опубликованная сборка с настройкой по умолчанию: **15,8 МБ в трее, 29,6 МБ после десяти раскрытий,
-29,3 МБ ещё через 45 секунд**, рабочий набор 117 МБ.
+The published build with the default setting: **15.8 MB in the tray, 29.6 MB after ten opens,
+29.3 MB another 45 seconds later**, with a working set of 117 MB.
 
-Переключение `ProcessRenderMode` у работающего приложения проверено отдельно и памяти не возвращает:
-93,3 МБ до переключения, 93,0 МБ сразу после, 88,4 МБ через 20 секунд — это обычная усадка рабочего
-набора, а не освобождение устройства. Поэтому настройка читается один раз на старте, до создания окна
-трея, и подпись под галочкой говорит о перезапуске.
+Switching `ProcessRenderMode` on a running application was tested separately and gives no memory back:
+93.3 MB before the switch, 93.0 MB straight after, 88.4 MB twenty seconds later — that is the ordinary shrinking of a
+working set, not the device being released. So the setting is read once at startup, before the tray window is
+created, and the caption under the checkbox says it takes effect after a restart.
 
-Внешний вид проверен отрисовкой окна настроек и обоих состояний галочки в PNG через `RenderTargetBitmap`.
-Новые ключи `Settings_Hardware` и `Settings_HardwareHint` добавлены во все 14 каталогов; тест
-локализации требует полного совпадения ключей. Тестов стало 62. Файл настроек пользователя после
-прогона тестов не изменился — сверено по хешу до и после.
+The appearance was checked by rendering the settings window and both states of the checkbox to PNG through `RenderTargetBitmap`.
+The new `Settings_Hardware` and `Settings_HardwareHint` keys were added to all 14 catalogs; the localization
+test requires the key sets to match exactly. There are now 62 tests. The user's settings file was unchanged after
+the test run — verified by hashing it before and after.
 
-**Не проверено:** насколько программный рендеринг заметен глазом на 240 Гц. Измерен только CPU;
-счётчика реально показанных кадров нет, и прошлая итерация отдельно вкладывалась в плавность —
-если разница будет видна, галочку в настройках можно включить обратно.
+**Not checked:** how noticeable software rendering is to the eye at 240 Hz. Only CPU was measured;
+there is no counter of frames actually shown, and the previous iteration invested in smoothness specifically —
+if the difference turns out to be visible, the checkbox in the settings can be turned back on.
 
-## Закрытие меню трея
+## Closing the tray menu
 
-Меню по правому клику на значке держалось на экране до выбора пункта: щелчок мимо, Esc и переход в
-другое приложение его не убирали. Причина не в WPF — при клике по значку оболочка никого не
-активирует, а popup фонового процесса не получает ни мышиного захвата, ни клавиатуры, поэтому все
-события мимо меню уходят тому, кто владеет передним планом.
+The menu from a right click on the icon stayed on screen until an item was picked: a click past it, Esc and switching to
+another application did not dismiss it. The cause is not WPF — when the icon is clicked the shell activates
+nobody, and a background process's popup receives neither the mouse capture nor the keyboard, so every
+event outside the menu goes to whoever owns the foreground.
 
-Что сделано: перед открытием меню передний план забирает скрытое окно трея (KB135788), после закрытия
-ему же отправляется `WM_NULL`, а передний план возвращается прежнему окну (или флайауту, если он
-открыт) — но только если его никто не занял. Пока меню открыто, таймер на 120 мс сверяет передний
-план: ушёл не к нам — меню закрывается. Дополнительно меню закрывается по левому клику на значке, по
-любому другому сообщению значка (средний клик, двойной, X-кнопки) и по смене DPI или разрешения.
+What was done: before the menu opens, the hidden tray window takes the foreground (KB135788); after it closes,
+`WM_NULL` is posted to that same window and the foreground is returned to the previous window (or to the flyout, if it is
+open) — but only if nobody else has taken it. While the menu is open, a 120 ms timer checks the foreground:
+if it went somewhere other than us, the menu closes. On top of that the menu closes on a left click on the icon, on
+any other icon message (middle click, double click, the X buttons) and on a DPI or resolution change.
 
-Одного переднего плана оказалось мало: меню по-прежнему стояло на экране. `SetForegroundWindow` на
-невидимом окне трея система выполнять не обязана, а без переднего плана WPF не получает и захвата
-мыши — то есть о нажатии мимо меню в процесс не приходит вообще ничего. Поэтому состояние ввода
-теперь спрашивается у системы напрямую: пока меню открыто, таймер на 50 мс проверяет `GetAsyncKeyState`
-по пяти кнопкам мыши и Escape и сверяет `WindowFromPoint` с окном popup. Нажатие где угодно вне меню,
-Escape и уход переднего плана закрывают меню; нажатие по самому меню — нет. Окно под курсором взято
-вместо прямоугольника popup: меню рисуется в слоёном окне с запасом под тень, и нажатие в этом поле —
-это нажатие мимо меню.
+The foreground alone turned out not to be enough: the menu still stood on screen. The system is not obliged to honour
+`SetForegroundWindow` on the invisible tray window, and without the foreground WPF does not get the mouse
+capture either — that is, nothing at all reaches the process about a press outside the menu. So the input state
+is now asked of the system directly: while the menu is open, a 50 ms timer checks `GetAsyncKeyState`
+for the five mouse buttons and Escape and compares `WindowFromPoint` against the popup's window. A press anywhere outside the menu,
+Escape and the foreground leaving all close the menu; a press on the menu itself does not. The window under the cursor was taken
+instead of the popup's rectangle: the menu is drawn in a layered window with room for its shadow, and a press in that
+margin is a press past the menu.
 
-Проверено: сборка и все 62 теста. В `FlyoutInteractionTests` добавлены две проверки: уход переднего
-плана в чужое окно закрывает меню и обнуляет счётчик меню, и нажатие кнопки мыши над чужим окном
-(`PointerButtonDown`/`WindowUnderPointer`) закрывает его же. Вторая проверка заодно подтверждает, что
-у popup к этому моменту есть настоящее окно — иначе проверка «мимо меню» не сработала бы и тест бы упал.
+Checked: the build and all 62 tests. Two checks were added to `FlyoutInteractionTests`: the foreground moving
+to a foreign window closes the menu and zeroes the menu counter, and a mouse button press over a foreign window
+(`PointerButtonDown`/`WindowUnderPointer`) closes it too. The second check also confirms that
+the popup has a real window by that point — otherwise the "outside the menu" check would not have fired and the test would have failed.
 
-Для ручной проверки добавлен `scripts/dev-build.ps1`: один самодостаточный файл `Downloads Stack.exe`
-в корне проекта (134 МБ, в `.gitignore`), инкрементально — пара секунд. Скрипт отказывается работать,
-пока эта сборка запущена: приложение единственное в системе, старую копию надо закрыть через Exit.
-`--check-ui` на собранном файле проходит. Измерять на нём время старта нельзя — ReadyToRun выключен,
-и один файл при первом запуске ещё и распаковывает нативные библиотеки; для этого есть `publish.ps1`.
-Однофайловая сборка без `--self-contained` здесь падает на старте (0xC000041D) — отсюда самодостаточная.
+For manual checking, `scripts/dev-build.ps1` was added: one self-contained `Downloads Stack.exe`
+in the project root (134 MB, in `.gitignore`), a couple of seconds incrementally. The script refuses to run
+while that build is running: the application is a single instance, so the old copy has to be closed through Exit.
+`--check-ui` passes on the built file. Startup time must not be measured on it — ReadyToRun is off,
+and a single file also unpacks its native libraries on the first run; `publish.ps1` exists for that.
+A single-file build without `--self-contained` crashes at startup here (0xC000041D) — hence the self-contained one.
 
-**Не проверено вручную:** живой правый клик по значку в трее. Опубликованная сборка в `artifacts/`
-старше обеих правок.
+**Not checked by hand:** a live right click on the tray icon. The published build in `artifacts/`
+is older than both fixes.
 
-## Непрозрачность подложки названий — 19.09.2026
+## The name backdrop's opacity — 19.09.2026
 
-Все 65 тестов проходят (46 с). Новые: `backdropOpacity` переживает запись и чтение, ноль читается как
-настоящий ноль, а не как пропущенное поле; файл без этого поля даёт 85 и не попадает в `.corrupt-*`;
-значение 140 приводится к 100, список папок при этом цел; процент переводится в альфу как 0 → 0,
-85 → 217 (ровно прежний `#D9`), 100 → 255, 400 → 255.
+All 65 tests pass (46 s). New ones: `backdropOpacity` survives a write and a read; zero is read as
+a real zero rather than as a missing field; a file without the field yields 85 and does not end up in `.corrupt-*`;
+a value of 140 is clamped to 100 with the folder list intact; and the percentage maps to alpha as 0 → 0,
+85 → 217 (exactly the old `#D9`), 100 → 255, 400 → 255.
 
-Проверка ползунка в диалоге настроек потребовала показать окно: у окна, которое ни разу не показывали,
-привязки остаются в состоянии `Unattached`, и `Slider.Value` остаётся нулём независимо от модели.
-Поэтому тест вызывает `Show()`/`Hide()` вокруг проверки — только так видно, что ползунок действительно
-берёт сохранённый процент, а построение диалога ничего не записывает.
+Checking the slider in the settings dialog required showing the window: in a window that has never been shown,
+the bindings stay `Unattached` and `Slider.Value` stays zero regardless of the model.
+So the test calls `Show()`/`Hide()` around the check — only that way is it visible that the slider really
+takes the saved percentage and that building the dialog writes nothing.
 
-Собран `Downloads Stack.exe` в корне через `scripts/dev-build.ps1`.
+`Downloads Stack.exe` in the root was built through `scripts/dev-build.ps1`.
 
-Правый отступ плашки увеличен с 8 до 14 DIP; на ширину строки и обрезку имени это не влияет, 65 тестов
-после правки проходят (48 с), exe в корне пересобран.
+The plate's right padding was raised from 8 to 14 DIP; that affects neither the row width nor where the name is cut, and the 65 tests
+pass after the change (48 s), with the exe in the root rebuilt.
 
-Фон всей поверхности панели переведён с `Transparent` на `#01000000`, чтобы мышь не проваливалась сквозь
-зазоры и поле панели. Тест проверяет именно кисть: WPF считает `Transparent` попадаемым и отличить эти два
-случая своим hit-test не может — сквозным пиксель делает Windows по альфе layered-окна. 65 тестов проходят
-(45 с), exe в корне пересобран.
+The background of the panel's whole surface was changed from `Transparent` to `#01000000`, so that the mouse does not fall through
+the gaps and the panel's margin. The test checks the brush specifically: WPF treats `Transparent` as hit-testable and cannot tell the two
+cases apart with its own hit-test — it is Windows that makes the pixel see-through, by the alpha of a layered window. 65 tests pass
+(45 s), with the exe in the root rebuilt.
 
-**Не проверено вручную:** вид ползунка и перекраска панели при перетаскивании на живом экране; поведение
-отложенной записи при закрытии окна настроек в первые 400 мс после движения ползунка; как новый правый
-отступ смотрится на самом длинном, сокращённом многоточием имени; живая проверка, что курсор над зазором
-больше не подсвечивает окно позади.
+**Not checked by hand:** how the slider looks and how the panel repaints while it is dragged on a live screen; how the
+deferred write behaves if the settings window is closed within the first 400 ms after the slider moved; how the new right
+padding looks on the longest name, the one shortened with an ellipsis; a live check that the cursor over a gap
+no longer highlights the window behind.
 
-## Выбор сортировки — 19.09.2026
+## Choosing the sort order — 19.09.2026
 
-Все 69 тестов проходят (50 с). Новые: каждое поле действительно задаёт порядок и галочка переворачивает
-список целиком (три файла, каждый лидирует ровно по одному полю, так что чтение чужого поля не пройдёт);
-`sortBy`/`sortReversed` переживают запись и чтение, файл без них означает прежний порядок, а неизвестное
-слово в `sortBy` откатывается к нему, не отправляя настройки в резервную копию; смена порядка пересобирает
-список из того, что источник уже знает, — файл, созданный за мгновение до неё, в этот снимок не попадает
-и приходит сам, уже в выбранном порядке. К проверке диалога добавлено, что выпадающий список предлагает
-все поля, показывает сохранённое значение и что построение диалога ничего не записывает.
+All 69 tests pass (50 s). New ones: every field really does set the order and the checkbox flips the
+list as a whole (three files, each leading by exactly one field, so reading the wrong field cannot pass);
+`sortBy`/`sortReversed` survive a write and a read, a file without them means the previous order, and an unknown
+word in `sortBy` falls back to it without sending the settings to a backup copy; changing the order rebuilds
+the list from what the source already knows — a file created an instant beforehand does not make that snapshot
+and arrives on its own, already in the chosen order. The dialog check gained a case that the dropdown offers
+every field, shows the saved value, and that building the dialog writes nothing.
 
-Порядок применяется через `DownloadsService.ApplyOrder`: он не трогает диск и не перезапускает наблюдение,
-поэтому смена пункта в списке не стоит ни одного перечисления каталога. Отсечение сотни в источнике при
-этом остаётся верным: сравнение — полный порядок с добором по имени и полному пути, так что сто первый
-файл источника не может попасть в общую сотню ни при каком поле.
+The order is applied through `DownloadsService.ApplyOrder`: it touches no disk and restarts no watching,
+so changing the item in the list does not cost a single directory enumeration. Cutting a source off at a hundred
+stays correct meanwhile: the comparison is a total order with tie-breaks on name and full path, so a source's
+hundred-and-first file cannot reach the combined hundred under any field.
 
-Время доступа читается из той же записи каталога, что имя и размер, и намеренно не входит в «штамп»
-файла: иначе каждое чтение файла считалось бы незавершённой записью. `NotifyFilters` на время доступа не
-подписан, поэтому порядок по нему обновляется при следующем сканировании папки, а не в момент открытия.
+The access time is read from the same directory entry as the name and the size, and is deliberately kept out of a file's
+"stamp": otherwise every read of a file would count as an unfinished write. `NotifyFilters` is not subscribed to access
+time, so ordering by it catches up on the next folder scan rather than at the moment the file is opened.
 
-`ComboBox` в WPF не имеет тёмного оформления — шаблон выпадающего списка и его строк написан в `Theme.xaml`
-целиком. `ComboBoxItem` наследуется от `ListBoxItem`, но неявные стили привязаны к точному типу, поэтому
-строкам списка нужен собственный стиль.
+WPF's `ComboBox` has no dark styling — the template of the dropdown and of its rows is written out in full in `Theme.xaml`.
+`ComboBoxItem` derives from `ListBoxItem`, but implicit styles are bound to the exact type, so the list's rows
+need a style of their own.
 
-Закрытый список рисуется не контейнером строки, а `SelectionBoxItemTemplate`, и `DisplayMemberPath` до него
-в собственном шаблоне не доходит: выбранный пункт показывался как `SortOption { Field = …, Text = … }`.
-Вместо пути задан явный `ItemTemplate` — тогда та же разметка достаётся и строкам, и закрытому списку.
-Тест диалога это фиксирует: `SelectionBoxItemTemplate` совпадает с `ItemTemplate` и не равен null.
+The closed box is drawn not by the row container but by `SelectionBoxItemTemplate`, and `DisplayMemberPath` does not reach it
+inside a custom template: the selected item was shown as `SortOption { Field = …, Text = … }`.
+An explicit `ItemTemplate` was given instead of the path — then the same markup reaches both the rows and the closed box.
+The dialog test pins that down: `SelectionBoxItemTemplate` equals `ItemTemplate` and is not null.
 
-Окно настроек перестроено в три группы с подписями и разделительными линиями: папки, сортировка,
-оформление. Кнопки «Добавить папку», «+ Загрузки», «Удалить» и «Повторить» переехали из нижнего ряда под
-список папок, на который они и действуют; внизу остаётся только «Готово». Галочка обратного порядка стоит
-в одной строке с выпадающим списком. Список папок ограничен 240 DIP вместо 300, максимальная высота окна
-поднята с 560 до 680.
+The settings window was rebuilt into three labelled groups separated by lines: folders, sorting,
+appearance. The "Add folder", "+ Downloads", "Remove" and "Retry" buttons moved out of the bottom row to under
+the folder list they act on; only "Done" stays at the bottom. The reverse-order checkbox sits
+on the same line as the dropdown. The folder list is capped at 240 DIP instead of 300, and the window's maximum height
+was raised from 560 to 680.
 
-Содержимое окна лежит в `ScrollViewer`, а «Готово» — в отдельной строке под ним. Окно по-прежнему растёт
-по содержимому и останавливается на максимальной высоте, но дальше настройки прокручиваются, а не выталкивают
-кнопку за нижний край; раньше это сделал бы и длинный список папок, и длинное сообщение об ошибке.
+The window's content sits in a `ScrollViewer`, with "Done" in a separate row below it. The window still grows
+with its content and stops at the maximum height, but beyond that the settings scroll rather than pushing
+the button off the bottom edge; previously a long folder list or a long error message would have done just that.
 
-Оформление проверено рендером: окно построено в отдельном процессе с реальным `Theme.xaml` и отрисовано
-через `RenderTargetBitmap` в PNG — закрытый список, всплывающая часть со всеми шестью пунктами и подсветкой
-выбранного, три группы с линиями, перенос кнопок, поведение прокрутки на списке из двенадцати папок.
+The styling was checked by rendering: the window was built in a separate process with the real `Theme.xaml` and drawn
+through `RenderTargetBitmap` into a PNG — the closed box, the popup part with all six items and the selected one highlighted,
+the three groups with their lines, the rearranged buttons, and the scrolling behaviour with a list of twelve folders.
 
-Собран `Downloads Stack.exe` в корне через `scripts/dev-build.ps1`.
+`Downloads Stack.exe` in the root was built through `scripts/dev-build.ps1`.
 
-**Не проверено вручную:** всё то же на живом экране, где рендер ничего не говорит: раскрытие списка вверх
-у нижнего края экрана, анимация появления всплывающей части, DPI 150/200% и подсветка строки под курсором.
-Не обрезается ли самый длинный пункт списка и подпись галочки в языках с длинными словами.
+**Not checked by hand:** all of the same on a live screen, where a render says nothing: the dropdown opening upwards
+at the bottom edge of the screen, the popup's appearance animation, DPI 150/200% and the highlighting of the row under the cursor.
+Whether the longest item in the list and the checkbox's caption get clipped in languages with long words.
 
-## Автозапуск и поставка — 19.09.2026
+## Startup and delivery — 19.09.2026
 
-Все 78 тестов проходят (49 с). Новые девять — про автозапуск: включение пишет команду с кавычками вокруг
-пути текущего exe, выключение убирает значение и повторное выключение не ошибка; запись, отключённая в
-«Автозагрузке» диспетчера задач, читается как «заблокирована», а не как «включена», и ответ пользователя
-там остаётся на месте после выключения самой записи; запись, указывающая на исчезнувший файл,
-переписывается на себя, а указывающая на существующую вторую копию — не трогается; путь вынимается из
-команды и в кавычках, и без них, и из мусора вроде незакрытой кавычки. Тесты работают в собственной ветке
-`HKCU\Software\DownloadsStack.Tests\<guid>`, которую удаляют за собой: прогон не имеет права трогать
-настоящий автозапуск машины, на которой идёт.
+All 78 tests pass (49 s). The nine new ones are about startup: turning it on writes a command with quotes around
+the current exe's path; turning it off removes the value and turning it off again is not an error; an entry disabled in
+Task Manager's Startup apps reads as "blocked" rather than as "on", and the user's answer there stays
+in place after the entry itself is removed; an entry pointing at a file that is gone is rewritten to point at itself,
+while one pointing at an existing second copy is left alone; and the path is extracted from the command both with quotes
+and without, and out of junk such as an unclosed quote. The tests work in a branch of their own,
+`HKCU\Software\DownloadsStack.Tests\<guid>`, which they delete afterwards: a run has no business touching the
+real startup configuration of the machine it runs on.
 
-К проверке диалога настроек добавлено, что галочка «Запускать вместе с Windows» показывает то же, что
-говорит реестр, что строка про диспетчер задач видна только у заблокированной записи и что построение
-диалога ничего в реестре не меняет — состояние читается до создания модели и сверяется после.
+The settings dialog check gained cases that the "Start with Windows" checkbox shows what the registry
+says, that the line about Task Manager is visible only for a blocked entry, and that building
+the dialog changes nothing in the registry — the state is read before the model is created and compared afterwards.
 
-`scripts/smoke-lifecycle.ps1` дополнен тремя проверками на настоящем exe: `--quit` останавливает
-работающий экземпляр (и возвращает 0 только когда процесс действительно исчез), `--autostart-on` пишет
-в `Run` ровно `"<путь>" --autostart`, `--autostart-off` эту строку убирает. Прежнее значение записи на
-машине скрипт возвращает на место в `finally`, чем бы прогон ни кончился. Полный прогон на сборке из
-корня: 21 проверка, все успешные, `loggedBytesDuringRun` = 0.
+`scripts/smoke-lifecycle.ps1` gained three checks against the real exe: `--quit` stops
+a running instance (and returns 0 only once the process has really gone), `--autostart-on` writes
+exactly `"<path>" --autostart` into `Run`, and `--autostart-off` removes that line. The entry's previous value on
+the machine is restored by the script in a `finally`, however the run ends. A full run against the build from
+the root: 21 checks, all passing, `loggedBytesDuringRun` = 0.
 
-Оформление группы «Запуск» проверено рендером окна настроек в PNG, в обоих состояниях — обычном и
-заблокированном: подпись группы, галочка, серая подсказка с тем же отступом 30 DIP, что у подсказки
-аппаратного ускорения, и красная строка под ней. Заблокированное состояние в рендере выставлено прямо на
-элементах: писать ради скриншота в настоящий `Run` машины нечестно. Первая версия харнесса именно это и
-сделала — щёлкнула галочку, обработчик диалога отработал по-настоящему и зарегистрировал автозапуск на
-scratch-копию exe; запись убрана, харнесс переписан так, чтобы снимать обработчик перед показом состояния.
+The styling of the "Startup" group was checked by rendering the settings window to PNG in both states, ordinary and
+blocked: the group caption, the checkbox, the grey hint with the same 30 DIP indent as the hardware acceleration
+hint, and the red line underneath it. The blocked state was set directly on the elements for the render:
+writing into the machine's real `Run` key for the sake of a screenshot would be dishonest. The first version of the harness did
+exactly that — it clicked the checkbox, the dialog's handler ran for real and registered startup for a
+scratch copy of the exe; the entry was removed and the harness rewritten to detach the handler before showing the state.
 
-### Установщик: что измерено
+### The installer: what was measured
 
-Пакет собирается WiX 6 (локальный инструмент репозитория, `dotnet tool restore`) и проверен установкой
-и удалением на этой машине: 401 файл и 141 МБ в `%LOCALAPPDATA%\Programs\Downloads Stack` без UAC,
-ярлык «Пуска» с `AppUserModel.ID` = `Vivoderin.DownloadsStack`, приложение запускается по окончании,
-удаление останавливает его, забирает папку, ярлык «Пуска» и ярлык, который приложение пишет рядом с
-собой, и не просит перезагрузку. Обновление 1.0.0 → 1.0.1 проверено отдельно: работающий экземпляр
-останавливается до подмены файлов, после обновления работает новая версия, автозапуск, включённый
-пользователем, остаётся включённым.
+The package is built with WiX 6 (a local tool of the repository, `dotnet tool restore`) and was checked by installing
+and uninstalling on this machine: 401 files and 141 MB in `%LOCALAPPDATA%\Programs\Downloads Stack` without UAC,
+a Start menu shortcut with `AppUserModel.ID` = `Vivoderin.DownloadsStack`, the application launching at the end,
+and uninstalling stopping it, taking away the folder, the Start menu shortcut and the shortcut the application writes next to
+itself, without asking for a reboot. An upgrade from 1.0.0 to 1.0.1 was checked separately: the running instance
+is stopped before the files are replaced, the new version runs afterwards, and startup, if the user had turned it on,
+stays on.
 
-Автозапуск из установщика сделать не удалось, и это стоит записать, чтобы не переделывать заново:
+Turning startup on from the installer could not be made to work, and that is worth writing down so that it is not attempted again:
 
-1. Custom action, запускающий `exe --autostart-on` после `InstallFiles`, падает с 1721 — всё, что
-   запланировано внутри скрипта установки, выполняется в момент составления скрипта, когда файлов на
-   диске ещё нет. После `InstallFinalize` действие выполняется и возвращает 0, программа пишет значение
-   и тут же читает его обратно как записанное (проверено диагностическим файлом: тот же пользователь,
-   тот же SID, тот же `LOCALAPPDATA`), но снаружи значения нет ни в одном кусте `HKEY_USERS`.
-2. То же самое с `<RegistryValue>` в компоненте пакета. В логе видно `RegAddValue` с правильным именем и
-   развёрнутым путём под `RegOpenKey(Root=-2147483647)`, то есть HKCU, — а значения после установки нет.
-   Опрос реестра каждые 50 мс во время установки не увидел его ни на мгновение. Соседние значения того же
-   компонента в том же ключе (`ZZAutostartProbe`, `ZZ Spaced Probe`) при этом записываются.
-3. Ручная запись того же имени тем же приложением вне установки живёт и не исчезает, в том числе пока
-   приложение работает. Удаление значения из custom action при деинсталляции тоже «успешно» и тоже не
-   происходит.
-4. На минимальном пакете из четырёх строк поведение воспроизводится, и первая установка совершенно
-   нового имени проходит нормально: значение появляется, удаление его убирает. После цикла
-   установка/удаление то же имя перестаёт записываться — из любого пакета, включая пакет с другим
-   `UpgradeCode` и другим GUID компонента. Причину найти не удалось; записей об этом имени в
-   `Installer\UserData\<SID>\Components` нет.
+1. A custom action running `exe --autostart-on` after `InstallFiles` fails with 1721 — everything
+   scheduled inside the installation script runs at the moment the script is composed, when the files are not on
+   disk yet. After `InstallFinalize` the action does run and returns 0, the program writes the value
+   and immediately reads it back as written (verified with a diagnostic file: the same user,
+   the same SID, the same `LOCALAPPDATA`), but from outside the value is in no hive of `HKEY_USERS`.
+2. The same with a `<RegistryValue>` in a component of the package. The log shows `RegAddValue` with the right name and
+   the expanded path under `RegOpenKey(Root=-2147483647)`, that is HKCU — and after the install the value is not there.
+   Polling the registry every 50 ms during the installation did not see it for a moment. Neighbouring values of the same
+   component in the same key (`ZZAutostartProbe`, `ZZ Spaced Probe`) do get written.
+3. Writing the same name by hand from the same application outside an installation sticks and does not disappear, including
+   while the application is running. Deleting the value from a custom action on uninstall also "succeeds" and also
+   does not happen.
+4. The behaviour reproduces on a minimal four-line package, and the first installation of a completely
+   new name goes fine: the value appears and uninstalling removes it. After one
+   install/uninstall cycle that same name stops being written — from any package, including one with a different
+   `UpgradeCode` and a different component GUID. The cause could not be found; there are no entries for that name in
+   `Installer\UserData\<SID>\Components`.
 
-Отсюда решение: ключом `Run` владеет приложение, установщик его не касается. Это же снимает вопрос о том,
-что делает с выбором пользователя «восстановление» и обновление пакета, — ничего.
+Hence the decision: the `Run` key is owned by the application and the installer does not touch it. That also settles the question of
+what a package repair or upgrade does to the user's choice — nothing.
 
-Побочная находка, тоже задокументированная в разметке пакета: `<RemoveRegistryValue>` в WiX 4+ не имеет
-атрибута `Action` и попадает в таблицу `RemoveRegistry`, которую Windows Installer обрабатывает при
-**установке** компонента, а не при удалении. Снять значение только при деинсталляции этим элементом
-нельзя. Ещё одна: `VersionNT` на Windows 11 равен 603, поэтому условие `VersionNT >= 1000` в `<Launch>`
-не пропускает установку нигде — первая попытка установки упала на этом с 1603.
+A side finding, documented in the package markup as well: `<RemoveRegistryValue>` in WiX 4+ has no
+`Action` attribute and lands in the `RemoveRegistry` table, which Windows Installer processes when a component is
+**installed**, not when it is removed. That element cannot be used to clear a value on uninstall only. And another:
+`VersionNT` on Windows 11 is 603, so the condition `VersionNT >= 1000` in `<Launch>`
+lets the installation through nowhere — the first install attempt failed on it with 1603.
 
-**Не проверено:** поведение автозапуска после настоящего входа в систему (перезагрузку никто не делал);
-установка и удаление на чистой машине и на машине другого пользователя; блокировка записи через
-«Автозагрузку» диспетчера задач вживую — состояние проверено тестом и рендером, но не щелчком в самом
-диспетчере; обновление, когда экземпляр запущен не из установленной папки, а из портативной копии.
+**Not checked:** how startup behaves after a real sign-in (nobody rebooted);
+installing and uninstalling on a clean machine and under another user; blocking the entry through
+Task Manager's Startup apps for real — the state was checked by a test and by a render, but not by a click in Task
+Manager itself; an upgrade while the running instance is not the installed one but a portable copy.
 
-## Число файлов в списке — 19.09.2026
+## The number of files in the list — 19.09.2026
 
-Все 81 тест проходят (50 с). Новые: `maxVisibleItems` переживает запись и чтение, файл без этого поля
-даёт 10 и не попадает в `.corrupt-*`, значение 0 приводится к 1 при целом списке папок; в диалоге
-настроек ползунок стоит от 1 до 20, со снапом по целым, и показывает сохранённое число, ничего не
-записывая при построении окна. Отдельный тест раскрывает настоящую панель с пятью файлами: при 10 видны
-все пять и высота 270 DIP, при 2 — две строки и 120 DIP, причём самый новый файл остаётся внизу, а при 20
-снова пять. Это проверяет не арифметику, а проводку: `PreviewMaxVisibleItems` → `LayoutChanged` →
-пересчёт окна.
+All 81 tests pass (50 s). New ones: `maxVisibleItems` survives a write and a read, a file without the field
+yields 10 and does not end up in `.corrupt-*`, and a value of 0 is clamped to 1 with the folder list intact; in the settings
+dialog the slider runs from 1 to 20, snapping to whole values, and shows the saved number without
+writing anything while the window is built. A separate test opens a real panel with five files: at 10 all five
+are visible at a height of 270 DIP, at 2 there are two rows and 120 DIP with the newest file still at the bottom, and at 20
+there are five again. That checks not the arithmetic but the wiring: `PreviewMaxVisibleItems` → `LayoutChanged` →
+recomputing the window.
 
-Попутно всплыло ограничение WPF, из-за которого второй оконный тест сначала падал: `Application` в
-процессе может быть только один, сколько бы UI-потоков ни было, и `Shutdown()` его из `Application.Current`
-не убирает. Тесты теперь берут общий `Application` через `EnsureApplication()` и гасят по окончании только
-свой диспетчер, поэтому порядок запуска ничего не решает.
+A WPF limitation surfaced along the way, which is why the second windowed test failed at first: there can be only one
+`Application` per process, however many UI threads there are, and `Shutdown()` does not remove it from `Application.Current`.
+The tests now take the shared `Application` through `EnsureApplication()` and shut down only their own
+dispatcher at the end, so the order they run in decides nothing.
 
-Максимальная высота окна настроек поднята с 680 до 740 DIP. Высота содержимого измерена рендером с
-отключённым ограничением: японский 697, английский 711, русский и немецкий по 726 DIP — при 680 окно
-прокручивалось бы всегда. Оформление проверено рендером в PNG на четырёх языках: новая строка стоит первой
-в группе «Оформление», ползунок и число выровнены с ползунком непрозрачности, полосы прокрутки нет.
+The settings window's maximum height was raised from 680 to 740 DIP. The content height was measured by rendering with the
+cap disabled: Japanese 697, English 711, Russian and German 726 DIP each — at 680 the window would have
+scrolled always. The styling was checked by rendering to PNG in four languages: the new row comes first
+in the "Appearance" group, the slider and the number line up with the opacity slider, and there is no scrollbar.
 
-Собран `Downloads Stack.exe` в корне через `scripts/dev-build.ps1`. Работавший экземпляр был остановлен
-через `--quit` (иначе файл занят) и запущен заново уже новым.
+`Downloads Stack.exe` in the root was built through `scripts/dev-build.ps1`. The running instance was stopped
+through `--quit` (the file is locked otherwise) and started again from the new build.
 
-**Не проверено:** поведение на мониторе, где не помещается выбранное число строк, — на этой машине
-двадцать строк в рабочую область влезают.
+**Not checked:** the behaviour on a monitor where the chosen number of rows does not fit — on this machine
+twenty rows do fit into the work area.

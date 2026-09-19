@@ -1,395 +1,287 @@
-# Downloads Stack — ТЗ первой версии
+# Downloads Stack — specification for the first version
 
-> Изменение по прямому уточнению пользователя: требуется значок В ТРЕЕ около часов. Раздел 3 заменяет первоначальную модель закреплённого taskbar-окна. Старые упоминания закрепления, минимизации, Alt+Tab, светлого интерфейса и старых размеров ниже считать отменёнными; актуальные поведение и проверки — README.md и CHECKS.md.
-Дата: 17.09.2026. Цель: простое приложение Windows 11, открывающее из системного трея общий список последних файлов выбранных пользователем папок; по умолчанию подключена папка «Загрузки». Этот документ предназначен для модели-исполнителя: реализовать приложение по этапам ниже, не расширяя объём работ.
+> Changed on the user's direct instruction: an icon IN THE TRAY next to the clock is required. Section 3 replaces the original model of a pinned taskbar window. Older mentions of pinning, minimising, Alt+Tab, a light interface and the old sizes below are to be treated as cancelled; the current behaviour and checks are in README.md and CHECKS.md.
+Date: 17.09.2026. Goal: a simple Windows 11 application that opens, from the system tray, a combined list of the newest files in folders the user has chosen; the Downloads folder is connected by default. This document is meant for the implementing model: build the application in the stages below without widening the scope.
 
-## 1. Реализуемость и границы
+## 1. Feasibility and boundaries
 
-На референсах — папка в Dock macOS, отображаемая как stack (стек), с раскрытием «веером». Здесь нужен обычный вертикальный список без веера, превью, анимаций и декоративного интерфейса. [Описание Apple](https://support.apple.com/en-lamr/guide/mac-help/mchl231f08fb/mac).
+The references show a macOS Dock folder displayed as a stack, opening in a fan. What is needed here is an ordinary vertical list with no fan, no previews, no animations and no decorative interface. [Apple's description](https://support.apple.com/en-lamr/guide/mac-help/mchl231f08fb/mac).
 
-Реализуемо обычным desktop-приложением. Кнопка на панели задач принадлежит компактному окну приложения. Не внедрять код в Explorer, не устанавливать драйверы и модификаторы панели задач. Не подменять запрошенную кнопку иконкой в трее около часов. Windows связывает кнопки панели задач с окнами; это не произвольные кнопки с собственным обработчиком клика. [Модель taskbar Windows](https://learn.microsoft.com/en-us/windows/win32/shell/taskbar).
+This is achievable with an ordinary desktop application. The taskbar button belongs to the application's own compact window. Do not inject code into Explorer, do not install drivers or taskbar modifiers. Do not substitute a tray icon next to the clock for the requested button. Windows ties taskbar buttons to windows; they are not arbitrary buttons with a click handler of their own. [The Windows taskbar model](https://learn.microsoft.com/en-us/windows/win32/shell/taskbar).
 
-Принятые решения для MVP:
+Decisions taken for the MVP:
 
-- Источники — настраиваемый список папок, изначально системная Downloads. Настройки добавления и удаления папок входят в MVP. Из каждой брать только непосредственные файлы; подпапки не обходить.
-- Это общий список содержимого выбранных папок, а не журнал интернет-загрузок: вручную скопированные туда файлы тоже видны; файлы вне выбранных папок — нет. Не читать базы браузеров. Признак Zone.Identifier не использовать как обязательный фильтр: он не является полным журналом загрузок.
-- Один файл за операцию перетаскивания. Открытие — двойным кликом либо Enter, одиночный клик выделяет строку, как в Проводнике.
-- Окно появляется над нижним краем рабочего пространства выбранного монитора. Точное выравнивание над собственной кнопкой taskbar не требуется: не использовать поиск внутреннего UI Explorer для определения её координат.
-- Приложение имеет обычную запись в Alt+Tab и системное превью на панели задач. Это допустимое отличие от Dock.
-- Закрепление выполняет пользователь через «Закрепить на панели задач». Без закрепления кнопка сохраняется только пока приложение запущено.
+- The sources are a configurable list of folders, initially the system Downloads folder. Adding and removing folders in the settings is part of the MVP. Take only the immediate files from each one; do not walk into subfolders.
+- This is a combined list of what is in the chosen folders, not a log of internet downloads: files copied there by hand are visible too; files outside the chosen folders are not. Do not read browser databases. Do not use the Zone.Identifier mark as a mandatory filter: it is not a complete download log.
+- One file per drag operation. Opening is a double click or Enter; a single click selects the row, as in File Explorer.
+- The window appears above the bottom edge of the work area of the chosen monitor. Exact alignment over the application's own taskbar button is not required: do not search Explorer's internal UI to find its coordinates.
+- The application has an ordinary Alt+Tab entry and a system taskbar preview. That is an acceptable difference from the Dock.
+- Pinning is done by the user through "Pin to taskbar". Without pinning, the button only exists while the application is running.
 
-## 2. Технологии
+## 2. Technology
 
-| Компонент | Решение и причина |
+| Component | Decision and reason |
 |---|---|
-| Язык / UI | C# + WPF: небольшой нативный Windows-интерфейс, доступ к Shell и OLE |
+| Language / UI | C# + WPF: a small native Windows interface, access to the Shell and to OLE |
 | Runtime | .NET 10 LTS, `net10.0-windows`, `UseWPF=true` |
-| Windows API | P/Invoke и COM interop, собранные в отдельном слое |
-| Файлы | System.IO, FileSystemWatcher, JSON для небольшого индекса |
-| Доставка | Self-contained publish для win-x64 в обычную папку; без обязательной установки runtime |
+| Windows API | P/Invoke and COM interop, collected in a layer of their own |
+| Files | System.IO, FileSystemWatcher, JSON for a small index |
+| Delivery | A self-contained publish for win-x64 into an ordinary folder; no mandatory runtime install |
 
-.NET 10 находится на LTS-поддержке до ноября 2028 года. [Политика Microsoft](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core).
+.NET 10 is under LTS support until November 2028. [Microsoft's policy](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core).
 
-Не использовать Electron, браузерный UI, сервер, SQLite, DI-фреймворк или UI-библиотеку ради одного списка. Допустим простой MVVM без стороннего пакета. Никаких прав администратора. ARM64, установщик, автообновление и автозапуск — последующие версии.
+Do not use Electron, a browser UI, a server, SQLite, a DI framework or a UI library for the sake of one list. Plain MVVM without a third-party package is fine. No administrator rights. ARM64, an installer, auto-update and startup are later versions.
 
-## 3. Поведение трея и панели — уточнение пользователя
+## 3. Tray and panel behaviour — the user's clarification
 
-Постоянный значок находится в системном трее рядом с часами, не среди кнопок открытых приложений. Использовать NotifyIcon; ShowInTaskbar=false, ShutdownMode=OnExplicitShutdown. Первый запуск создаёт значок без показа панели. Windows может поместить значок под стрелку скрытых значков; это описать в README, не менять настройки Windows принудительно.
+A permanent icon sits in the system tray next to the clock, not among the buttons of open applications. Use NotifyIcon; ShowInTaskbar=false, ShutdownMode=OnExplicitShutdown. The first run creates the icon without showing the panel. Windows may place the icon under the hidden-icons arrow; describe that in the README, do not change Windows settings by force.
 
-ЛКМ по значку раскрывает/скрывает компактную панель; Escape, Alt+F4 и потеря активации скрывают её через Hide(), не завершая приложение. Учитывать деактивацию, которая приходит перед кликом по трею, чтобы повторный клик не открывал панель заново. Контекстные меню, настройки, выбор папки и drag временно подавляют автоматическое скрытие. Выход из меню завершает процесс и освобождает значок. Повторный запуск показывает существующий экземпляр.
+A left click on the icon shows and hides the compact panel; Escape, Alt+F4 and loss of activation hide it through Hide() without ending the application. Account for the deactivation that arrives before the click on the tray, so that a second click does not open the panel again. Context menus, the settings, folder selection and a drag temporarily suppress the automatic hide. Exit in the menu ends the process and releases the icon. Running the application again shows the existing instance.
 
-Окно без обычного заголовка, тёмная тема, собственные стили кнопок/строк/меню, системное скругление DWM. Настройки используют тот же стиль. Панель появляется над taskbar на мониторе курсора с ограничением рабочей областью; не центрировать её как обычное приложение. Размер примерно 392 DIP в ширину, до 560 DIP по высоте; строки 50 DIP, одноимённые файлы с путём до 66 DIP. Нативный drag и настройки источников сохранить.
+A window without the ordinary title bar, a dark theme, its own styles for buttons, rows and menus, and the system DWM rounding. The settings use the same style. The panel appears above the taskbar on the monitor under the cursor, constrained by the work area; do not centre it like an ordinary application. The size is roughly 392 DIP wide and up to 560 DIP tall; rows are 50 DIP, and files with the same name carrying a path go up to 66 DIP. Keep the native drag and the source settings.
 
-## 4. Минимальный интерфейс
+## 4. The minimal interface
 
-- Ширина 380 DIP, высота по содержимому, максимум 480 DIP и не больше рабочей области минус отступы. Строка около 34 DIP.
-- Сверху короткий заголовок «Последние файлы». Далее прокручиваемый виртуализированный список максимум из 100 последних файлов суммарно по всем источникам, без группировки по папкам.
-- Каждая строка: системная иконка 20–24 DIP, имя вместе с расширением. При сокращении длинного имени сохранять расширение; tooltip показывает полный путь.
-- Снизу команда «Открыть папку»: при одном источнике открывает его, при нескольких показывает короткое меню выбора источника, при отсутствии отключена. Меню заголовка: «Настройки», «Обновить», «Выход». Контекстное меню файла: «Открыть», «Показать в проводнике». Полное shell context menu не требуется.
-- Одинаковые имена из разных папок оставлять отдельными строками; только для таких совпадений показывать вторую приглушённую строку с родительским путём (высоту строки увеличить по содержимому). Tooltip всегда содержит полный путь.
-- Клавиши ↑/↓ — выбор, Enter — открыть, Escape — свернуть. Видимый фокус, доступные имена элементов.
-- Пустой список: «В выбранных папках пока нет файлов». Если источников нет — «Добавьте папку в настройках» с командой открытия настроек. Если часть папок недоступна, продолжать показывать доступные файлы и компактное сообщение «Недоступно папок: N» со ссылкой в настройки. Полную недоступность не выдавать за пустой список.
-- Простой фон с читаемым контрастом и выделением строки. Без миниатюр, карточек, поиска, группировки, настроек темы и счётчиков.
+- Width 380 DIP, height by content, at most 480 DIP and no more than the work area minus the margins. A row is about 34 DIP.
+- A short "Recent files" title at the top. Below it a scrollable virtualised list of at most the 100 newest files across all the sources, without grouping by folder.
+- Each row: a 20–24 DIP system icon and the name with its extension. When a long name is shortened, keep the extension; the tooltip shows the full path.
+- An "Open folder" command at the bottom: with a single source it opens that one, with several it shows a short source-picking menu, and with none it is disabled. The title menu: "Settings", "Refresh", "Exit". The file context menu: "Open", "Show in File Explorer". A full shell context menu is not required.
+- Identical names from different folders stay as separate rows; only for such collisions show a second, dimmed line with the parent path (increase the row height by content). The tooltip always contains the full path.
+- ↑/↓ select, Enter opens, Escape collapses. Visible focus, accessible element names.
+- An empty list: "There are no files in the chosen folders yet." If there are no sources — "Add a folder in the settings", with a command that opens the settings. If some folders are unavailable, keep showing the available files and a compact "Folders unavailable: N" message linking to the settings. Do not present complete unavailability as an empty list.
+- A plain background with readable contrast and row highlighting. No thumbnails, cards, search, grouping, theme settings or counters.
 
-## 5. Источники, настройки, сортировка и обновление
+## 5. Sources, settings, sorting and refresh
 
-### Настройки папок
+### Folder settings
 
-Небольшой диалог «Настройки»: список подключённых папок с полным путём и статусом, кнопки «Добавить папку…», «Удалить из списка» и «Готово». Добавление — системный выбор одной папки. Изменения сохранять сразу и применять без перезапуска. Удаление источника отключает только наблюдение и убирает его строки из приложения; не удаляет и не перемещает файлы на диске. Можно удалить в том числе Downloads и оставить пустой список источников. Если Downloads удалена, дать команду «Добавить „Загрузки“» для восстановления системного источника.
+A small "Settings" dialog: the list of connected folders with their full path and status, plus "Add folder…", "Remove from list" and "Done" buttons. Adding uses the system single-folder picker. Save changes immediately and apply them without a restart. Removing a source only stops watching it and drops its rows from the application; it does not delete or move any files on disk. Downloads can be removed too, leaving the source list empty. If Downloads was removed, offer an "Add Downloads" command to restore the system source.
 
-Хранить `%LOCALAPPDATA%\DownloadsStack\settings.json`: `schemaVersion`, `sources[]`, у каждого стабильный `id`, `kind` (`downloads` либо `directory`), для `directory` — абсолютный `path`. Downloads добавлять автоматически только при создании первоначальной конфигурации; сохранённый пустой список считать намеренным. Запись атомарная; ошибку сохранения показать, не утверждать, что изменение сохранено. Повреждённый файл настроек сохранить отдельной резервной копией и восстановить конфигурацию по умолчанию с сообщением пользователю.
+Store `%LOCALAPPDATA%\DownloadsStack\settings.json`: `schemaVersion`, `sources[]`, each with a stable `id`, a `kind` (`downloads` or `directory`) and, for `directory`, an absolute `path`. Add Downloads automatically only when the initial configuration is created; a saved empty list is to be treated as deliberate. The write is atomic; report a save failure rather than claiming the change was saved. Keep a corrupted settings file as a separate backup copy and restore the default configuration, telling the user.
 
-Для системного источника путь получать через `SHGetKnownFolderPath(FOLDERID_Downloads)`, а не конкатенацией `%USERPROFILE%\Downloads`: папка может быть перенесена. Повторно разрешать при запуске и обновлении источников; освобождать возвращённую память. [Known folders](https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid).
+For the system source, obtain the path through `SHGetKnownFolderPath(FOLDERID_Downloads)` rather than by concatenating `%USERPROFILE%\Downloads`: the folder may have been moved. Resolve it again on startup and when the sources are refreshed; free the returned memory. [Known folders](https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid).
 
-Пути нормализовать до абсолютных, учитывать корни дисков и завершающий разделитель; сравнивать OrdinalIgnoreCase. Повторное добавление того же разрешённого пути не создаёт второй источник, а выделяет существующий. Для доступных каталогов разрешать junction/symlink до конечного пути при проверке дубликатов; файлы объединять по нормализованному разрешённому полному пути. Hard links с разными путями считать отдельными элементами. Родительскую и вложенную папку разрешать одновременно: рекурсии нет.
+Normalise paths to absolute ones, allowing for drive roots and a trailing separator; compare with OrdinalIgnoreCase. Adding the same resolved path again does not create a second source but selects the existing one. For accessible directories, resolve junctions and symlinks to the final path when checking for duplicates; merge files by their normalised, resolved full path. Treat hard links with different paths as separate items. Allow a parent folder and a nested one at the same time: there is no recursion.
 
-Источник, ставший недоступным, сохранять в настройках со статусом ошибки и «Повторить». Его устаревшие элементы убирать из активного списка, индекс дат сохранять. Восстанавливать наблюдение при следующем раскрытии/обновлении; сбой одной папки не блокирует остальные. Съёмные и сетевые пути обрабатывать в фоне с ограниченной конкурентностью; не накапливать повторные зависшие операции по одному источнику. Не обещать мгновенную отмену зависшего файлового I/O.
+Keep a source that has become unavailable in the settings with an error status and a "Retry" action. Drop its stale items from the active list but keep its date index. Resume watching on the next open or refresh; the failure of one folder must not block the rest. Handle removable and network paths in the background with limited concurrency; do not pile up repeated hung operations on one source. Do not promise instant cancellation of hung file I/O.
 
-### Файлы и даты
+### Files and dates
 
-Перечислять файлы в фоне. Исключить каталоги, Hidden/System и окончания `.crdownload`, `.part`, `.partial`, `.tmp` без учёта регистра. Это эвристика, не универсальное определение завершения загрузки. Для нового/изменённого файла ждать неизменности размера и LastWriteTime на двух проверках с интервалом 1 секунда. Не требовать исключительного открытия файла и не исключать нулевой размер. Браузерное переименование временного файла в конечный обрабатывать как появление готового файла; затем также проверять стабильность. Медленно пишущийся файл может пройти эвристику — ограничение описать в README.
+Enumerate files in the background. Exclude directories, Hidden/System entries and the endings `.crdownload`, `.part`, `.partial` and `.tmp`, case-insensitively. This is a heuristic, not a universal test for a finished download. For a new or changed file, wait for the size and LastWriteTime to stay the same across two checks one second apart. Do not require opening the file exclusively and do not exclude zero size. Treat a browser renaming a temporary file into its final name as a finished file appearing; then check stability as well. A slowly written file can pass the heuristic — describe that limitation in the README.
 
-Сортировка должна приближать время появления, а не время последнего редактирования:
+Sorting should approximate when a file appeared, not when it was last edited:
 
-1. Для существующих при первом запуске и первоначальном сканировании добавленной папки файлов взять `CreationTimeUtc`; это приближение, а не доказанное время скачивания. Не поднимать всю добавленную папку наверх текущей датой.
-2. Для новых обнаруженных готовых файлов сохранить `FirstSeenUtc` текущим временем; для обычного переименования готового файла сохранять прежнее значение.
-3. При запуске вновь обнаруженные файлы без записи индекса датировать `CreationTimeUtc`: время появления во время остановки приложения точно неизвестно.
-4. Объединить источники, убрать дубликаты путей, сортировать по эффективной дате убывающе; при равенстве — по имени, затем полному пути. После объединения взять первые 100. Изменение содержимого существующего файла не поднимает его наверх.
+1. For files that already exist on the first run and on the initial scan of an added folder, take `CreationTimeUtc`; that is an approximation, not a proven download time. Do not lift a whole added folder to the top with today's date.
+2. For newly discovered finished files, record `FirstSeenUtc` as the current time; for an ordinary rename of a finished file, keep the previous value.
+3. On startup, date newly discovered files that have no index entry by `CreationTimeUtc`: when they appeared while the application was stopped is not known exactly.
+4. Merge the sources, remove duplicate paths, sort by the effective date descending; on a tie, by name and then by full path. After merging, take the first 100. Changing the contents of an existing file does not lift it to the top.
 
-Индекс: `%LOCALAPPDATA%\DownloadsStack\index.json`, идентификатор источника, путь и эффективная дата; сравнение путей OrdinalIgnoreCase. Обновлять атомарно через временный файл. После успешного сканирования конкретного источника удалять его отсутствующие записи; не затрагивать записи недоступных/ещё не просканированных источников. При удалении источника из настроек очищать его записи индекса. Повреждённый индекс пересоздавать. Не хранить содержимое файлов или URL загрузок.
+The index: `%LOCALAPPDATA%\DownloadsStack\index.json`, holding the source id, the path and the effective date; path comparison is OrdinalIgnoreCase. Update it atomically through a temporary file. After a specific source has been scanned successfully, delete its missing entries; do not touch entries of unavailable or not yet scanned sources. When a source is removed from the settings, clear its index entries. Recreate a corrupted index. Do not store file contents or download URLs.
 
-Отдельный `FileSystemWatcher` на каждый уникальный доступный источник: Created/Changed/Renamed/Deleted/Error, без рекурсии. События объединять debounce 300–500 мс по источнику; не рассчитывать на их уникальность и полноту. При переполнении буфера пересканировать затронутый источник; при запуске и каждом раскрытии — все источники. Никакого постоянного полного polling. Отложенные проверки стабильности касаются только кандидатов. При добавлении подключать watcher до первичного сканирования и затем сверять накопленные события; при удалении освобождать watcher и игнорировать его незавершённые результаты через номер поколения конфигурации. [Ограничения FileSystemWatcher](https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher).
+A separate `FileSystemWatcher` for every unique available source: Created/Changed/Renamed/Deleted/Error, without recursion. Debounce the events by 300–500 ms per source; do not count on them being unique or complete. On a buffer overflow, rescan the affected source; on startup and on every open, rescan all of them. No continuous full polling. Deferred stability checks apply only to candidates. When a source is added, attach the watcher before the initial scan and then reconcile the events collected meanwhile; when one is removed, dispose of the watcher and ignore its outstanding results through a configuration generation number. [FileSystemWatcher's limitations](https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher).
 
-Обновлять UI только через Dispatcher. Не запускать конкурирующие сканирования без контроля: отмена/номер поколения; устаревший результат не заменяет новый. При обновлениях сохранять выделение и прокрутку. Во время drag откладывать изменения.
+Update the UI only through the Dispatcher. Do not start competing scans uncontrolled: use cancellation and a generation number; a stale result must not replace a newer one. Preserve the selection and the scroll position across updates. Defer changes during a drag.
 
-## 6. Открытие, иконки, перетаскивание
+## 6. Opening, icons, dragging
 
-Открытие: полный путь через `ProcessStartInfo` с `UseShellExecute=true`, без `cmd.exe` и ручной сборки shell-команды. Windows выбирает приложение по ассоциации. Перед вызовом проверять существование, но также ловить ошибку самого вызова. Не обходить системные подтверждения запуска скачанных исполняемых файлов. После успешного запуска минимизировать список.
+Opening: the full path through `ProcessStartInfo` with `UseShellExecute=true`, without `cmd.exe` and without assembling a shell command by hand. Windows picks the application by association. Check for existence before the call, but also catch a failure of the call itself. Do not bypass the system's confirmation prompts for running downloaded executables. Minimise the list after a successful launch.
 
-«Показать в проводнике»: `SHOpenFolderAndSelectItems`; «Открыть папку» — shell open папки. Имена с пробелами, кириллицей, кавычками и символами shell должны обрабатываться как пути, а не команды.
+"Show in File Explorer": `SHOpenFolderAndSelectItems`; "Open folder": a shell open of the folder. Names with spaces, Cyrillic, quotes and shell characters must be handled as paths, not as commands.
 
-Иконки: `SHGetFileInfoW` с небольшой системной иконкой. Получение вне UI-потока на выделенном STA-потоке, ограниченная очередь и кэш; после копирования HICON в WPF image обязательно `DestroyIcon`. Для обычных типов допустим кэш по расширению, для exe/lnk — по пути и времени изменения. При ошибке — общая иконка. [SHGetFileInfoW](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shgetfileinfow).
+Icons: `SHGetFileInfoW` with the small system icon. Fetch them off the UI thread on a dedicated STA thread, with a bounded queue and a cache; after copying the HICON into a WPF image, always call `DestroyIcon`. For ordinary types a cache keyed by extension is fine; for exe and lnk, key it by path and modification time. On failure, use the generic icon. [SHGetFileInfoW](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shgetfileinfow).
 
-Drag начинается при удержании ЛКМ после системного порога `MinimumHorizontalDragDistance` / `MinimumVerticalDragDistance`. Само нажатие файл не открывает. Перед drag фиксировать полный путь и проверять существование. После drag не вызывать обработчик открытия.
+A drag starts when the left button is held past the system thresholds `MinimumHorizontalDragDistance` / `MinimumVerticalDragDistance`. The press itself does not open the file. Before the drag, capture the full path and check that it exists. After a drag, do not invoke the open handler.
 
-Для итогового MVP использовать Shell data object реального файла:
+For the final MVP, use the Shell data object of the real file:
 
-1. На UI STA-потоке получить IShellItem через `SHCreateItemFromParsingName`.
-2. `IShellItem.BindToHandler(BHID_DataObject, IID_IDataObject)` получает нативный COM IDataObject.
-3. Вызвать `SHDoDragDrop` с этим объектом, HWND окна, `pdsrc=null`, разрешив Copy | Move. Проверять HRESULT; Cancel — штатный результат.
-4. Передавать существующий файл, не создавать его временную копию и не заменять объект текстом пути.
-5. Копирование, перенос, выбор эффекта и диалоги конфликтов выполняет Shell/получатель. Не удалять исходник вручную по возвращённому Move: это может привести к повторному удалению. После завершения перечитать папку; освободить принадлежащие сервису COM-ресурсы.
+1. On the UI STA thread, obtain an IShellItem through `SHCreateItemFromParsingName`.
+2. `IShellItem.BindToHandler(BHID_DataObject, IID_IDataObject)` yields the native COM IDataObject.
+3. Call `SHDoDragDrop` with that object, the window's HWND, `pdsrc=null`, allowing Copy | Move. Check the HRESULT; Cancel is a normal outcome.
+4. Hand over the existing file; do not create a temporary copy of it and do not replace the object with the path as text.
+5. Copying, moving, choosing the effect and the conflict dialogs are the Shell's and the receiver's job. Do not delete the source by hand when Move comes back: that can end in deleting it twice. Re-read the folder afterwards; release the COM resources the service owns.
 
-Такой путь выбран для взаимодействия, близкого к Проводнику. Простой WPF `DataFormats.FileDrop` + Copy допустим только для раннего прототипа, но не закрывает требования к переносу. Не смешивать `System.Windows.IDataObject` с нативным COM IDataObject. [Shell data object](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ishellitem-bindtohandler), [SHDoDragDrop](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shdodragdrop), [Shell transfer semantics](https://learn.microsoft.com/en-us/windows/win32/shell/clipboard).
+This route was chosen for an interaction close to File Explorer's. A plain WPF `DataFormats.FileDrop` + Copy is acceptable only for an early prototype and does not meet the requirements for moving. Do not mix `System.Windows.IDataObject` with the native COM IDataObject. [Shell data object](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ishellitem-bindtohandler), [SHDoDragDrop](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shdodragdrop), [Shell transfer semantics](https://learn.microsoft.com/en-us/windows/win32/shell/clipboard).
 
-Приём файлов зависит от целевого приложения: обещать совместимость с приложениями, принимающими обычные файловые drop-операции, а не со всеми программами. Проверить drop в Проводник и браузерную область загрузки; запускать стороны без повышения прав. Входящий drag в наш список, виртуальные файлы и drag правой кнопкой вне MVP.
+Whether a file is accepted depends on the target application: promise compatibility with applications that accept ordinary file drops, not with every program. Test a drop into File Explorer and into a browser's upload area; run both sides without elevation. Incoming drags into our list, virtual files and right-button drags are out of scope for the MVP.
 
-## 7. Структура проекта
+## 7. Project layout
 
-Один WPF-проект и небольшой тестовый проект для чистой логики:
+One WPF project and a small test project for the pure logic:
 
 ```text
 src/DownloadsStack/
-  App.xaml(.cs)                 запуск, один экземпляр, завершение
-  MainWindow.xaml(.cs)          список, фокус, жесты, состояния окна
-  MainViewModel.cs              элементы, выбор, команды, ошибки
-  SettingsWindow.xaml(.cs)      папки, добавление/удаление, статусы
-  Models/FolderSource.cs        id, тип источника, путь
-  Models/DownloadItem.cs        источник, путь, имя, дата, иконка
-  Services/SettingsStore.cs     конфигурация источников, атомарная запись
-  Services/DownloadsService.cs  источники, сканирование, watchers, объединение
-  Services/IndexStore.cs        JSON-индекс и атомарная запись
-  Services/ShellService.cs      открыть/выделить, иконки, drag
-  Interop/                     только необходимые Win32/COM объявления
+  App.xaml(.cs)                 startup, single instance, shutdown
+  MainWindow.xaml(.cs)          the list, focus, gestures, window states
+  MainViewModel.cs              items, selection, commands, errors
+  SettingsWindow.xaml(.cs)      folders, add/remove, statuses
+  Models/FolderSource.cs        id, source kind, path
+  Models/DownloadItem.cs        source, path, name, date, icon
+  Services/SettingsStore.cs     source configuration, atomic write
+  Services/DownloadsService.cs  sources, scanning, watchers, merging
+  Services/IndexStore.cs        the JSON index and its atomic write
+  Services/ShellService.cs      open/select, icons, drag
+  Interop/                      only the Win32/COM declarations that are needed
 tests/DownloadsStack.Tests/
 README.md
 ```
 
-Крупные операции I/O не выполнять на UI-потоке. Освобождать watcher, таймеры, mutex, pipe, HICON и COM-объекты при завершении. Ошибки писать в ограниченный локальный лог, без содержимого файлов. Цель: после загрузки список раскрывается примерно за 200 мс из кэша, в простое нет постоянной нагрузки CPU. Это проверяемая цель, не обещание одинаковой скорости на любом диске.
+Do not perform large I/O on the UI thread. Dispose of watchers, timers, the mutex, the pipe, HICONs and COM objects on shutdown. Write errors into a bounded local log, without file contents. The target: after loading, the list opens in roughly 200 ms from the cache, and there is no constant CPU load while idle. That is a testable target, not a promise of equal speed on any disk.
 
-## 8. Порядок реализации и приёмка
+## 8. Implementation order and acceptance
 
-1. **Рискованный прототип:** окно с тремя реальными файлами, taskbar, минимизация/восстановление, Shell drag. Проверить закрепление, повторный запуск, потерю фокуса, перенос и отмену. До успеха не заниматься оформлением.
-2. **Данные:** конфигурация источников, Known Folder, сканирование, индекс дат, watchers, фильтрация, стабильность и объединение файлов.
-3. **UI:** виртуализированный список, системные иконки, настройки папок, команды, клавиатура, ошибки и DPI.
-4. **Поставка:** Release publish, README с запуском, ручным закреплением, ограничениями и результатами проверок. Не отмечать непроведённые проверки как успешные.
+1. **The risky prototype:** a window with three real files, the taskbar, minimise and restore, a Shell drag. Check pinning, a second launch, focus loss, a move and a cancel. Do no styling work until that succeeds.
+2. **Data:** source configuration, the Known Folder, scanning, the date index, watchers, filtering, stability and merging of files.
+3. **UI:** the virtualised list, system icons, folder settings, commands, the keyboard, errors and DPI.
+4. **Delivery:** a Release publish, a README covering how to run it, manual pinning, the limitations and the results of the checks. Do not mark checks that were not carried out as passed.
 
-Обязательные проверки на реальной Windows 11:
+Mandatory checks on real Windows 11:
 
-- Закреплённая кнопка запускает/восстанавливает список; после Escape и клика снаружи кнопка остаётся. Второй экземпляр не создаётся. Нет пустого большого окна или второй кнопки.
-- Скачивание Chromium и Firefox: временное имя не видно, конечный файл появляется после стабилизации. Создание/переименование/удаление в Проводнике отражаются в списке.
-- Сортировка сохраняется после перезапуска; редактирование старого файла не делает его новым. Повреждение индекса восстанавливается без потери пользовательских файлов.
-- Добавление/удаление папки действует без перезапуска и сохраняется после него; удаление источника не меняет файлы на диске. Удаление всех источников не возвращает Downloads автоматически. Новая папка не получает целиком сегодняшнюю дату.
-- Две папки с одноимёнными файлами: оба файла видны с различимыми путями, открывается/перетаскивается правильный. Повторное добавление пути (включая иной регистр, завершающий разделитель и доступный junction) не дублирует список. Лимит 100 общий.
-- Недоступность одного источника не скрывает доступные; восстановление возвращает файлы с прежними датами. Удаление папки во время сканирования не возвращает её строки поздним результатом. Настройки/выбор папки не сворачивают главное окно и не создают вторую кнопку taskbar.
-- Double click/Enter открывают файл правильным приложением; исчезнувший файл и отсутствующая ассоциация не роняют процесс.
-- Drop в Проводник: копирование и перенос, Ctrl/Shift, по возможности между разными дисками; Escape отменяет. Проверить наличие исходника и целевого файла, а не только курсор. Конфликт имён решается системным диалогом.
-- Drop в область приёма файлов браузера передаёт файл. Потеря фокуса во время drag не обрывает операцию.
-- Пустая/недоступная/перенесённая папка, длинные имена и кириллица, 10 000 файлов, 100/150/200% DPI, два монитора, автоскрытие панели задач.
+- The pinned button launches or restores the list; after Escape and after a click outside, the button stays. No second instance is created. There is no empty large window and no second button.
+- Downloading in Chromium and Firefox: the temporary name is not visible, and the final file appears after it settles. Creating, renaming and deleting in File Explorer is reflected in the list.
+- The order survives a restart; editing an old file does not make it new. A corrupted index recovers without the loss of any user file.
+- Adding and removing a folder takes effect without a restart and survives one; removing a source does not change any file on disk. Removing every source does not bring Downloads back automatically. A newly added folder does not get today's date across the board.
+- Two folders with identically named files: both files are visible with distinguishable paths, and the right one is opened and dragged. Adding a path again — including with different casing, a trailing separator or an accessible junction — does not duplicate the list. The limit of 100 is shared.
+- One unavailable source does not hide the available ones; recovery brings the files back with their previous dates. Removing a folder mid-scan does not bring its rows back through a late result. The settings and the folder picker do not collapse the main window and do not create a second taskbar button.
+- Double click and Enter open the file with the right application; a file that has disappeared and a missing association do not bring down the process.
+- A drop into File Explorer: copying and moving, Ctrl/Shift, across different drives where possible; Escape cancels. Check for the source and the target file, not just the cursor. A name conflict is resolved by the system dialog.
+- A drop into a browser's file-upload area transfers the file. Losing focus during a drag does not break the operation.
+- An empty, unavailable or moved folder, long names and Cyrillic, 10,000 files, 100/150/200% DPI, two monitors, a taskbar set to auto-hide.
 
-Автоматические тесты нужны для фильтрации, общего порядка/лимита, дедупликации путей, сохранения дат, восстановления индекса и различия «нет настроек» / «сохранён пустой список источников». Окно, Shell и drag проверять интеграционно вручную; тесты чистой логики не доказывают работоспособность взаимодействия с Windows.
+Automated tests are needed for filtering, the combined order and limit, path de-duplication, date persistence, index recovery and the difference between "no settings" and "a saved empty source list". The window, the Shell and dragging are to be checked manually as integration; pure-logic tests do not prove that the interaction with Windows works.
 
-Пример поставки:
+An example of delivery:
 
 ```powershell
 dotnet test -c Release
 dotnet publish src/DownloadsStack/DownloadsStack.csproj -c Release -r win-x64 --self-contained true -p:PublishTrimmed=false -o artifacts/win-x64
 ```
 
-Итог исполнителя: исходники, запускаемая папка сборки, README и фактический перечень пройденных/непройденных проверок. Не добавлять последующие функции до выполнения этой приёмки.
+What the implementer delivers: the sources, a runnable build folder, the README and an honest list of the checks that passed and failed. Do not add later features until this acceptance is met.
 
 
-## Актуальное уточнение оформления
+## Current clarification on styling
 
-По запросу пользователя от 17.09.2026 панель и настройки должны использовать полупрозрачную тёмную подложку с системным Desktop Acrylic, не белый или полностью непрозрачный фон. WPF Window.Background и CompositionTarget.BackgroundColor прозрачные, WindowChrome.GlassFrameThickness=-1, DWM_SYSTEMBACKDROP_TYPE=DWMSBT_TRANSIENTWINDOW. Текст явно светлый; прозрачность самого окна через Window.Opacity не менять, чтобы текст и иконки оставались контрастными. При недоступности API — тёмная непрозрачная подложка.
+At the user's request of 17.09.2026, the panel and the settings must use a translucent dark backdrop with the system Desktop Acrylic, not a white or fully opaque background. WPF's Window.Background and CompositionTarget.BackgroundColor are transparent, WindowChrome.GlassFrameThickness=-1, DWM_SYSTEMBACKDROP_TYPE=DWMSBT_TRANSIENTWINDOW. The text is explicitly light; do not change the window's own transparency through Window.Opacity, so that text and icons stay contrasty. When the API is unavailable, fall back to an opaque dark backdrop.
 
-## Минимальная панель — последнее уточнение пользователя
+## A minimal panel — the user's latest clarification
 
-В раскрытой панели только иконки файлов и имена с расширением. Удалить заголовок, декоративную иконку, шестерёнку, многоточие, кнопку открытия папки и разделители. Настройки и выход доступны через ПКМ по значку трея. Выбирать самые новые файлы, помещающиеся целиком в высоту панели, затем показывать их от более старого сверху к самому новому снизу. Не отображать частичные строки. Никакого ScrollViewer, скроллбара или прокрутки колесом/клавиатурой. Строка 50 DIP с отступами, высота панели равна сумме строк плюс 22 DIP; максимум 560 DIP и рабочая область монитора. Подсказка содержит полный путь; вторые строки папок убрать. Пустое состояние — один короткий текст без кнопок. Это уточнение отменяет предыдущие требования заголовка, футера, дополнительных строк и прокручиваемого списка. Вместе с ними отменяются меню заголовка и собственные команды «Открыть папку» и «Показать в проводнике»: единственное меню строки — нативное shell context menu Windows, поэтому `SHOpenFolderAndSelectItems` и shell open папки в приложении больше не используются. Перехода к папке источника из панели нет.
+The open panel holds nothing but file icons and names with their extension. Remove the title, the decorative icon, the gear, the ellipsis, the open-folder button and the separators. The settings and Exit are reachable through a right click on the tray icon. Pick the newest files that fit into the panel's height completely, then show them from older at the top to newest at the bottom. Do not display partial rows. No ScrollViewer, no scrollbar, no scrolling with the wheel or the keyboard. A row is 50 DIP including padding, and the panel's height is the sum of the rows plus 22 DIP; at most 560 DIP and at most the monitor's work area. The tooltip holds the full path; the second folder lines are gone. The empty state is one short line of text without buttons. This clarification cancels the earlier requirements for a title, a footer, extra lines and a scrollable list. Cancelled along with them are the title menu and the application's own "Open folder" and "Show in File Explorer" commands: the only row menu is the native Windows shell context menu, so `SHOpenFolderAndSelectItems` and the shell open of a folder are no longer used in the application. There is no way to jump to the source folder from the panel.
 
-## Полностью прозрачный список — последнее уточнение
+## A fully transparent list — latest clarification
 
-Основная панель без фона, blur, затемнения, рамки и тени окна. Использовать WPF AllowsTransparency=True с WindowStyle=None, Background=Transparent, без WindowChrome и применения DWM backdrop. Непрозрачность текста и иконок сохранить. Едва заметная тень только текста повышает читаемость; подсветка строки только при наведении или выборе. Для hit-test всей строки допустима невидимая практически подложка альфа 1/255, чтобы можно было открывать/перетаскивать файл за любую область строки. Настройки остаются отдельным диалогом с Acrylic. Порядок (самый новый внизу), отсутствие прокрутки и число полностью помещающихся строк сохраняются.
+The main panel has no background, no blur, no dimming, no border and no window shadow. Use WPF AllowsTransparency=True with WindowStyle=None and Background=Transparent, without WindowChrome and without applying a DWM backdrop. Keep the text and the icons opaque. A barely visible shadow on the text alone improves readability; a row is highlighted only on hover or selection. For hit-testing the whole row, an all but invisible backdrop at alpha 1/255 is acceptable, so that a file can be opened or dragged from anywhere in its row. The settings stay a separate dialog with Acrylic. The order (newest at the bottom), the absence of scrolling and the number of fully fitting rows are unchanged.
 
-## Читаемость текста — актуальное уточнение
+## Text readability — current clarification
 
-Под названием каждого файла расположить локальную тёмную подложку со скруглением и мягкими размытыми краями. Подложка подстраивается под ширину видимого текста и не участвует в измерении размеров строки. Размывать только подложку, не текст. Сохранить прозрачность общего фона, порядок файлов и отсутствие прокрутки. Текст сокращать с сохранением расширения.
+Place a local dark backdrop with rounded corners and soft blurred edges behind every file name. The backdrop adapts to the width of the visible text and takes no part in measuring the row. Blur the backdrop only, never the text. Keep the overall background transparent, the file order and the absence of scrolling. Shorten text while keeping the extension.
 
-## Исправление drag и задержки пути — 18.09.2026
+## Fixing the drag and the path delay — 18.09.2026
 
-Освобождать WPF Mouse.Capture перед SHDoDragDrop и в finally. Во время drag игнорировать toggle трея. При завершении/отмене сбрасывать drag-состояние, возобновлять обновления и скрывать панель без блокировки следующего клика трея. Для проверки деактивации учитывать GetForegroundWindow, не только IsActive. Подсказка пути: InitialShowDelay=2000, BetweenShowDelay=0 (отключить ускоренный переход между подсказками); отключать/закрывать подсказки во время drag и при скрытии. При восстановлении включать снова.
+Release the WPF Mouse.Capture before SHDoDragDrop and in the finally block. Ignore the tray toggle during a drag. On completion or cancellation, reset the drag state, resume updates and hide the panel without blocking the next tray click. For the deactivation check, take GetForegroundWindow into account, not just IsActive. The path tooltip: InitialShowDelay=2000, BetweenShowDelay=0 (disable the accelerated hand-off between tooltips); disable and close tooltips during a drag and while hidden. Re-enable them on restore.
 
-## Анимации и задержка пути — актуальное уточнение 18.09.2026
+## Animations and the path delay — current clarification 18.09.2026
 
-Задержка подсказки пути 1000 мс, BetweenShowDelay=0. Убрать hover/selected заливку строки, оставить доступный контур keyboard focus. На наведении всей строки масштаб иконки 1→1.35 с BackEase/EaseOut (180 мс), подъём на 2 DIP; при уходе возврат за 120 мс. Анимировать RenderTransform, не размеры/layout. Прозрачный список появляется: opacity 0→1, scale .96→1, translateY 12→0, 150–170 мс. Закрытие: opacity→0, scale→.98, Y→8 за 95 мс, затем Hide. Отдельное состояние Hiding и номер перехода предотвращают устаревший Hide после повторного открытия. Во время закрытия отключить hit-test и tooltip. Перед drag остановить анимацию появления, вернуть transform в стабильное состояние. Панель следует системному параметру ClientAreaAnimation.
+The path tooltip delay is 1000 ms, BetweenShowDelay=0. Remove the hover/selected row fill and keep the accessible keyboard focus outline. Hovering anywhere on the row scales the icon 1→1.35 with BackEase/EaseOut (180 ms) and lifts it by 2 DIP; leaving returns it over 120 ms. Animate the RenderTransform, not the size or the layout. The transparent list appears with opacity 0→1, scale .96→1, translateY 12→0, over 150–170 ms. Closing: opacity→0, scale→.98, Y→8 over 95 ms, then Hide. A separate Hiding state and a transition number prevent a stale Hide after a reopen. Disable hit-testing and tooltips while closing. Before a drag, stop the appearance animation and return the transform to a stable state. The panel follows the system's ClientAreaAnimation setting.
 
-## Состояние значка трея
+## The tray icon's state
 
-Использовать белую исходную иконку, пока список закрыт, и голубую версию той же иконки, пока список открыт. Видимые и Dragging состояния считаются открытыми; Hiding/Hidden/Exiting — закрытыми. Смена NotifyIcon.Icon через событие изменения логического состояния, без polling. Менять tooltip трея на действие «Открыть список»/«Закрыть список». Освобождать обе иконки и отписываться от события при завершении.
+Use the white original icon while the list is closed and a blue version of the same icon while it is open. The Visible and Dragging states count as open; Hiding, Hidden and Exiting count as closed. Change NotifyIcon.Icon from the logical-state change event, without polling. Switch the tray tooltip to the action: "Open the list" / "Close the list". Dispose of both icons and unsubscribe from the event on shutdown.
 
-### Открытие одним кликом и выделение через ПКМ
-Открывать файл на отпускании ЛКМ над той же строкой, где начато нажатие. Начавшийся drag подавляет открытие; обработчика двойного клика нет. ЛКМ не выделяет строку рамкой. ПКМ открывает контекстное меню и отмечает его строку рамкой через FileRowState.IsContextTarget. Анимация иконки активна при IsMouseOver ИЛИ IsContextTarget: переход курсора в меню не уменьшает иконку. При закрытии меню снимается отметка; если курсор остаётся над строкой, увеличение сохраняется. Не перестраивать контейнеры строк во время меню; применить актуальный список после закрытия.
-
-
-### Системные миниатюры вместо иконок медиа
-Это требование заменяет прежний запрет миниатюр. Для .png/.jpg/.jpeg/.mp4 получать IShellItemImageFactory через SHCreateItemFromParsingName и запрашивать GetImage с SIIGBF_THUMBNAILONLY, размером 96x96, без обрезки пропорций. Использовать существующий фоновый STA-поток IconService, не поток интерфейса. Конвертировать HBITMAP в замороженный BitmapSource, освобождать HBITMAP через DeleteObject и COM-объект после копирования. При недоступности миниатюры использовать SHGetFileInfo. Кэш медиа по полному каноническому пути и LastWriteTimeUtc, не по расширению; ограничение кэша 256. Извлекать миниатюры только для строк, помещающихся в раскрытой панели. Отображение 24x24 DIP с Stretch=Uniform и HighQuality; увеличение при наведении/ПКМ сохраняется. Для MP4 использовать системный обработчик Windows, без ffmpeg в приложении.
+### Opening with one click and selecting with a right click
+Open the file when the left button is released over the same row where the press began. A drag that has started suppresses the open; there is no double-click handler. A left click does not outline the row. A right click opens the context menu and marks its row with an outline through FileRowState.IsContextTarget. The icon animation is active on IsMouseOver OR IsContextTarget: moving the cursor into the menu does not shrink the icon. Closing the menu clears the mark; if the cursor is still over the row, the enlargement stays. Do not rebuild the row containers while the menu is open; apply the current list once it closes.
 
 
-### Контекстное меню Windows Shell
-Удалить кастомное меню файла. На отпускании ПКМ получать IContextMenu из IShellItem.BindToHandler(BHID_SFUIObject), создавать HMENU через CreatePopupMenu и наполнять QueryContextMenu с диапазоном команд 1–32767. Shift включает CMF_EXTENDEDVERBS. Показывать TrackPopupMenuEx(TPM_RETURNCMD|TPM_RIGHTBUTTON) с HWND списка и экранными координатами клика. Ноль означает отмену; команду передавать InvokeCommand как смещение commandId-1 через CMINVOKECOMMANDINFOEX с Unicode и ptInvoke, с учётом Shift/Ctrl. Во время меню перенаправлять WM_INITMENUPOPUP/WM_DRAWITEM/WM_MEASUREITEM/WM_MENUCHAR в IContextMenu3 либо IContextMenu2 через временный HwndSourceHook. Освобождать HMENU, COM и hook в finally. На время вложенного нативного цикла подавлять скрытие и перестройку строк, отключать подсказки, удерживать IsContextTarget и увеличение иконки. При отмене снять рамку и проверить деактивацию; после команды обновить данные и скрыть панель. Ошибка Shell показывается штатным обработчиком, без молчаливой подмены кастомным меню. Это классическое меню Windows 11; новое компактное меню Explorer этим API не предоставляется.
+### System thumbnails instead of media icons
+This requirement replaces the earlier ban on thumbnails. For .png/.jpg/.jpeg/.mp4, obtain an IShellItemImageFactory through SHCreateItemFromParsingName and request GetImage with SIIGBF_THUMBNAILONLY at 96x96 without cropping the aspect ratio. Use IconService's existing background STA thread, not the UI thread. Convert the HBITMAP into a frozen BitmapSource, and release the HBITMAP through DeleteObject and the COM object once it has been copied. When no thumbnail is available, fall back to SHGetFileInfo. Cache media by full canonical path and LastWriteTimeUtc, not by extension; cap the cache at 256. Fetch thumbnails only for the rows that fit into the open panel. Display at 24x24 DIP with Stretch=Uniform and HighQuality; the enlargement on hover and on right click is unchanged. For MP4, use the Windows system handler, with no ffmpeg in the application.
 
-### Тема нативного меню
-Перед созданием системного меню читать AppsUseLightTheme из HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize, без записи настроек Windows. В NativeMenuTheme опционально загрузить uxtheme.dll из SystemDirectory, получить ordinal 135 (SetPreferredAppMode), 133 (AllowDarkModeForWindow), 104 (RefreshImmersiveColorPolicyState), 136 (FlushMenuThemes). По теме приложений устанавливать ForceDark/ForceLight только для нашего процесса; при SystemParameters.HighContrast использовать Default. Разрешить тёмную тему HWND-владельца и сбросить кэш меню. Эти ordinal API не документированы; ограничить Windows 10 1903+ и проверять наличие exports, при недоступности сохранять обычное системное меню. Добавить Common-Controls v6 в manifest. Проверка опубликованного EXE --check-ui вызывает настройку на реальном HWND и сообщает доступность.
 
-### Плавность на мониторах высокой частоты
-Жёсткого лимита 60 FPS в прежнем коде нет: DesiredFrameRate не был задан (null). Перед анимациями получать текущий режим выбранного монитора через GetMonitorInfoW(MONITORINFOEXW) и EnumDisplaySettingsW(ENUM_CURRENT_SETTINGS), задавать Timeline.SetDesiredFrameRate на каждой DoubleAnimation; при недоступности данных использовать 60. На время открытия/закрытия включать BitmapCache на FlyoutSurface, снимать после завершения/отмены перехода; защитить завершение transitionId. Кэшировать статический Grid подложки/текста. Анимации иконок перенести из XAML Storyboard в обработчики MouseEnter/MouseLeave с общей фабрикой Motion, чтобы частота менялась при смене монитора. Клонировать замороженный TransformGroup перед анимацией. ПКМ удерживает увеличение до закрытия меню; системное отключение анимаций учитывается и для иконок. Не использовать постоянный таймер кадров в простое. Requested FPS не считать измеренным FPS экрана.
+### The Windows Shell context menu
+Remove the custom file menu. On the right button's release, obtain IContextMenu from IShellItem.BindToHandler(BHID_SFUIObject), create an HMENU through CreatePopupMenu and fill it with QueryContextMenu over the command range 1–32767. Shift turns on CMF_EXTENDEDVERBS. Show it with TrackPopupMenuEx(TPM_RETURNCMD|TPM_RIGHTBUTTON), the list's HWND and the click's screen coordinates. Zero means cancellation; pass the command to InvokeCommand as the offset commandId-1 through CMINVOKECOMMANDINFOEX with Unicode and ptInvoke, taking Shift and Ctrl into account. While the menu is up, forward WM_INITMENUPOPUP/WM_DRAWITEM/WM_MEASUREITEM/WM_MENUCHAR to IContextMenu3 or IContextMenu2 through a temporary HwndSourceHook. Release the HMENU, the COM objects and the hook in a finally block. For the duration of the nested native loop, suppress hiding and row rebuilding, disable tooltips, and hold IsContextTarget and the enlarged icon. On cancellation, clear the outline and check for deactivation; after a command, refresh the data and hide the panel. A Shell error is surfaced by the normal handler, not silently replaced by a custom menu. This is the classic Windows 11 menu; Explorer's new compact menu is not exposed through this API.
 
-## Производительность и ресурсы — 19.09.2026
+### The native menu's theme
+Before creating the system menu, read AppsUseLightTheme from HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize, without writing Windows settings. In NativeMenuTheme, optionally load uxtheme.dll from SystemDirectory and resolve ordinal 135 (SetPreferredAppMode), 133 (AllowDarkModeForWindow), 104 (RefreshImmersiveColorPolicyState) and 136 (FlushMenuThemes). Following the app theme, set ForceDark or ForceLight for our process only; under SystemParameters.HighContrast, use Default. Allow the dark theme for the owner HWND and flush the menu cache. These ordinal APIs are undocumented; limit them to Windows 10 1903+, check that the exports exist, and fall back to the ordinary system menu when they do not. Add Common-Controls v6 to the manifest. The published EXE's `--check-ui` check runs the setup against a real HWND and reports whether it is available.
 
-Итерация посвящена стоимости работы. Видимое поведение, оформление и набор функций не менялись.
+### Smoothness on high refresh-rate monitors
+There was no hard 60 FPS cap in the previous code: DesiredFrameRate was never set (null). Before animating, read the chosen monitor's current mode through GetMonitorInfoW(MONITORINFOEXW) and EnumDisplaySettingsW(ENUM_CURRENT_SETTINGS) and set Timeline.SetDesiredFrameRate on every DoubleAnimation; fall back to 60 when the data is unavailable. Turn on BitmapCache on FlyoutSurface for the duration of an open or close and remove it once the transition completes or is cancelled; guard the completion with transitionId. Cache the static backdrop and text Grid. Move the icon animations out of the XAML Storyboard into MouseEnter/MouseLeave handlers with a shared Motion factory, so that the rate follows a change of monitor. Clone the frozen TransformGroup before animating it. A right click holds the enlargement until the menu closes; the system's "turn off animations" setting is honoured for the icons too. Do not run a permanent frame timer while idle. Requested FPS is not to be taken as the screen's measured FPS.
 
-### Повторное чтение папки
+## Performance and resources — 19.09.2026
 
-Проход по наблюдаемой папке — единственная постоянная нагрузка приложения: он запускается на любую запись
-внутри неё и во время загрузки повторяется каждые несколько сотен миллисекунд. Раньше каждый проход копировал
-всю папку: словари `Stable` и `Aliases`, список кандидатов, `DownloadItem` на каждый файл, ключи индекса вида
-`source\0path`. На папке в десять тысяч файлов это 15,9 МБ мусора за проход.
+This iteration is about what running the application costs. Visible behaviour, styling and the feature set did not change.
 
-Теперь состояние источника — один словарь `Files`, ключ которого имя файла, а значение переживает проходы.
-Каталог перечисляется через `FileSystemEnumerable`: `FileSystemEntry` отдаёт имя, атрибуты, размер и время
-записи прямо из записи каталога, без `FileInfo` и без строки имени. Имя ищется в словаре как
-`ReadOnlySpan<char>` через `GetAlternateLookup`. Файл, у которого совпали размер и время записи, отмечается
-номером прохода и не стоит ни одного выделения памяти. Строка пути создаётся один раз за время жизни файла
-и переиспользуется; для обычного файла канонический путь — та же самая строка, а словарь `Aliases` хранит
-только reparse point. Удаления определяются сравнением счётчика увиденных записей с размером словаря;
-равенство означает, что перебирать словарь незачем.
+### Re-reading a folder
 
-Индекс дат хранится вложенно, по источнику и затем по пути: составной ключ строился на каждый файл каждого
-прохода. Дата файла запоминается в его записи и спрашивается у индекса один раз — при первом появлении.
-`Prune` выполняется, только если что-то действительно исчезло.
+Walking a watched folder is the application's only continuous load: it runs on any write inside that folder and repeats every few hundred milliseconds while a download is in progress. Each pass used to copy the entire folder: the `Stable` and `Aliases` dictionaries, the candidate list, a `DownloadItem` per file, index keys of the form `source\0path`. On a folder of ten thousand files that is 15.9 MB of garbage per pass.
 
-Источник публикует не все свои файлы, а новейшую сотню — ровно столько, сколько переживёт `FileRules.Merge`.
-Это безопасно: внутри источника канонические пути уникальны, поэтому сто первый файл источника не может
-попасть в общую сотню. Если проход ничего не изменил, список не перестраивается и не публикуется.
+Now a source's state is a single `Files` dictionary keyed by file name, whose values survive across passes. The directory is enumerated through `FileSystemEnumerable`: `FileSystemEntry` hands over the name, the attributes, the size and the write time straight from the directory entry, with no `FileInfo` and no name string. The name is looked up in the dictionary as a `ReadOnlySpan<char>` through `GetAlternateLookup`. A file whose size and write time match is stamped with the pass number and costs not one allocation. The path string is created once in a file's lifetime and reused; for an ordinary file the canonical path is that very same string, and the `Aliases` dictionary holds reparse points only. Deletions are detected by comparing the count of entries seen with the dictionary's size; equality means there is no reason to walk the dictionary at all.
 
-Подтверждение «файл дописан» на большой папке больше не открывает handle на каждый файл: свыше 64 изменённых
-записей дешевле перечислить каталог второй раз.
+The date index is stored nested, by source and then by path: the composite key used to be built for every file on every pass. A file's date is remembered in its entry and asked of the index once — when it first appears. `Prune` runs only if something really did disappear.
 
-### Значок трея без WinForms
+A source publishes not all of its files but its newest hundred — exactly as many as will survive `FileRules.Merge`. That is safe: canonical paths are unique inside a source, so a source's hundred-and-first file cannot make it into the combined hundred. If a pass changed nothing, the list is neither rebuilt nor published.
 
-`UseWindowsForms` убран. Ради одного `NotifyIcon` в процесс отображались `System.Windows.Forms.dll` (13,1 МБ)
-и `System.Windows.Forms.Primitives.dll` (3,4 МБ) со своими сателлитами, и всё это загружалось на старте.
-Значок регистрируется вызовом `Shell_NotifyIcon` на собственном скрытом окне (`HwndSource`, WS_POPUP без
-WS_VISIBLE, WS_EX_TOOLWINDOW). Окно обязано быть верхнеуровневым, а не message-only: перезапуск Explorer
-объявляется широковещательным сообщением `TaskbarCreated`, которое message-only окно не получает. Перед
-повторной регистрацией выполняется NIM_DELETE, иначе NIM_ADD на живом значке возвращает ошибку. Если оболочка
-ещё не слушает — приложение запущено раньше панели задач — регистрация повторяется пять раз с секундной паузой.
+Confirming that a file has finished being written no longer opens a handle per file on a large folder: past 64 changed entries it is cheaper to enumerate the directory a second time.
 
-Значок собирается из упакованного `.ico` вручную: разбирается ICONDIR, выбирается изображение под
-`GetSystemMetricsForDpi(SM_CXSMICON)`, и его PNG передаётся в `CreateIconFromResourceEx`. Сообщение обратного
-вызова — `WM_APP+1`; `WM_LBUTTONUP` раскрывает панель, `WM_RBUTTONUP` открывает меню. Это отменяет прежнее
-указание раздела 3 использовать `NotifyIcon`; поведение значка остаётся тем же.
+### A tray icon without WinForms
 
-### Сборка и старт
+`UseWindowsForms` is gone. For the sake of one `NotifyIcon`, `System.Windows.Forms.dll` (13.1 MB) and `System.Windows.Forms.Primitives.dll` (3.4 MB) were mapped into the process along with their satellites, all of it loaded at startup. The icon is now registered by calling `Shell_NotifyIcon` on a hidden window of our own (`HwndSource`, WS_POPUP without WS_VISIBLE, WS_EX_TOOLWINDOW). The window must be top-level rather than message-only: an Explorer restart is announced by the broadcast `TaskbarCreated` message, which a message-only window never receives. NIM_DELETE runs before re-registering, otherwise NIM_ADD on a live icon returns an error. If the shell is not listening yet — the application started before the taskbar — registration is retried five times with a one-second pause.
 
-`PublishReadyToRun` включён. `PublishReadyToRunComposite` — нет, и это измеренное решение: единый образ
-на 157 МБ раскрывал панель за 4,1 с на машине, которая его ещё не читала, против 1,3 с у обычного
-ReadyToRun, ради примерно 50 мс выигрыша на прогретом файле. Приложение трея запускается при входе в систему,
-с холодного диска — то есть ровно в том случае, который composite ухудшает.
+The icon is assembled from the packed `.ico` by hand: ICONDIR is parsed, the image matching `GetSystemMetricsForDpi(SM_CXSMICON)` is picked, and its PNG is handed to `CreateIconFromResourceEx`. The callback message is `WM_APP+1`; `WM_LBUTTONUP` opens the panel and `WM_RBUTTONUP` opens the menu. This supersedes section 3's earlier instruction to use `NotifyIcon`; the icon's behaviour is unchanged.
 
-Настройки и индекс читаются с диска параллельно друг другу и начинают читаться в конструкторе модели, пока
-WPF ещё строит окно и создаёт HWND. Частота обновления и масштаб монитора кэшируются до `WM_DPICHANGED`
-или `WM_DISPLAYCHANGE`: `EnumDisplaySettingsW` — обращение к драйверу дисплея, а позиционирование выполняется
-на каждый снимок. Иконки запрашиваются только для тех строк, которые физически помещаются на экран:
-панель ограничена 560 DIP при высоте строки 50, поэтому шестнадцати достаточно, а спрашивать оболочку
-про остальные восемьдесят четыре — работа, которой пользователь никогда не увидит. `FileNameText`
-переиспользует `Typeface`: подбор ширины имени стоит около восьми измерений, и на каждое из них строилось
-новое начертание.
+### Build and startup
 
-### Рендеринг: настройка вместо умолчания WPF — 19.09.2026
+`PublishReadyToRun` is on. `PublishReadyToRunComposite` is not, and that is a measured decision: the single 157 MB image opened the panel in 4.1 s on a machine that had not read it yet, against 1.3 s for ordinary ReadyToRun, in exchange for roughly 50 ms on a warm file. A tray application starts at sign-in, off a cold disk — precisely the case composite makes worse.
 
-Замеры показали, что подавляющая часть памяти приложения — это Direct3D, а не его собственные данные.
-Пустое WPF-приложение без окна занимает 6,1 МБ приватного рабочего набора; оно же с одним окном — 54,2 МБ;
-оно же с одним окном и `RenderMode.SoftwareOnly` — 10,7 МБ. Устройство создаётся при появлении первого
-окна и не освобождается: у самого приложения 62 МБ в трее превращались в 106 МБ после первого раскрытия
-панели и там и оставались.
+The settings and the index are read from disk in parallel with each other, and start being read in the model's constructor while WPF is still building the window and creating the HWND. The refresh rate and the monitor scale are cached until `WM_DPICHANGED` or `WM_DISPLAYCHANGE`: `EnumDisplaySettingsW` is a call into the display driver, and positioning happens on every open. Icons are requested only for the rows that physically fit on screen: the panel is capped at 560 DIP with a row height of 50, so sixteen is enough, and asking the shell about the other eighty-four is work the user will never see. `FileNameText` reuses the `Typeface`: fitting a name's width costs about eight measurements, and each of them used to build a new typeface.
 
-Поэтому добавлена настройка `hardwareRendering` в `settings.json`, по умолчанию выключенная. Файл, записанный
-до появления поля, читается как «выключено», а не как ошибка схемы. Значение применяется в
-`App.OnStartup` до создания окна трея — первого, что получает render target. Менять режим на ходу
-бесполезно: проверено, переключение `ProcessRenderMode` у работающего приложения не вернуло ни мегабайта
-(93,3 → 93,0 МБ), поэтому галочка в настройках честно сообщает, что применяется после перезапуска.
+### Rendering: a setting instead of the WPF default — 19.09.2026
 
-Цена программного рендеринга — процессорное время на анимациях открытия и закрытия, и только на них:
-в простое WPF не рисует вообще. Десять циклов открыть/закрыть стоят около 3,2 с CPU на видеокарте и
-около 4,3–5,7 с без неё.
+Measurements showed that the overwhelming majority of the application's memory is Direct3D, not its own data. An empty WPF application with no window takes 6.1 MB of private working set; the same one with a single window takes 54.2 MB; the same one with a single window and `RenderMode.SoftwareOnly` takes 10.7 MB. The device is created when the first window appears and is never released: for the application itself, 62 MB in the tray turned into 106 MB after the panel was opened once, and stayed there.
 
-### Подложка названий: непрозрачность в настройках — 19.09.2026
+Hence the `hardwareRendering` setting in `settings.json`, off by default. A file written before the field existed reads as "off" rather than as a schema error. The value is applied in `App.OnStartup` before the tray window is created — the first thing to get a render target. Changing the mode on the fly is pointless: it was tested, and switching `ProcessRenderMode` on a running application gave back not one megabyte (93.3 → 93.0 MB), so the checkbox in the settings honestly says it takes effect after a restart.
 
-Тёмная плашка под именем файла была жёстко задана как `#D9101114` — 85% непрозрачности. По запросу
-пользователя от 19.09.2026 её альфа вынесена в настройки ползунком от 0 до 100%. Ноль оставляет имя
-над чистым рабочим столом (тень текста и размытие краёв остаются), сто делает плашку непрозрачной.
+The price of software rendering is CPU time during the open and close animations, and only there: while idle, WPF does not draw at all. Ten open/close cycles cost about 3.2 s of CPU with the graphics card and about 4.3–5.7 s without it.
 
-Значение хранится как `backdropOpacity` в `settings.json`, по умолчанию 85 — ровно то, что было в XAML,
-поэтому вид без вмешательства не меняется. Файл, записанный до появления поля, читается как 85, а не как
-ошибка схемы. Число вне диапазона не считается повреждением файла: оно приводится к границе, иначе правка
-одного числа руками стоила бы пользователю всего списка папок.
+### The name backdrop: opacity in the settings — 19.09.2026
 
-Строки списка берут одну общую замороженную кисть из модели (`BackdropBrush`), а не свой цвет каждая:
-движение ползунка перекрашивает открытую панель сразу, ничего не пересоздавая. Запись на диск отложена
-на 400 мс после последнего изменения и выполняется также при закрытии окна настроек — иначе один жест
-мышью означал бы сотню перезаписей `settings.json`. Настройка применяется на ходу, перезапуск не нужен.
+The dark plate behind a file name was hard-coded as `#D9101114` — 85% opacity. At the user's request of 19.09.2026 its alpha was moved into the settings as a slider from 0 to 100%. Zero leaves the name over the bare desktop (the text shadow and the blurred edges remain), a hundred makes the plate opaque.
 
-Там же по запросу пользователя расширен правый край плашки: отступы стали несимметричными — 8 DIP слева
-(ровно левое поле самого текста, плашка рисуется от начала колонки) и 14 справа. Последний символ, а у
-сокращённого имени многоточие, упирался в край.
+The value is stored as `backdropOpacity` in `settings.json`, 85 by default — exactly what the XAML had, so the look does not change unless someone changes it. A file written before the field existed reads as 85 rather than as a schema error. A number out of range is not treated as corruption: it is clamped, because otherwise editing one number by hand would cost the user their whole list of folders.
 
-### Число файлов в списке: ползунок в настройках — 19.09.2026
+The list's rows take one shared frozen brush from the model (`BackdropBrush`) rather than each having its own colour: moving the slider repaints the open panel immediately, recreating nothing. The write to disk is deferred by 400 ms after the last change and also happens when the settings window closes — otherwise one gesture of the mouse would mean a hundred rewrites of `settings.json`. The setting applies on the fly; no restart is needed.
 
-Сколько строк показывает панель, решала одна константа: высота ограничивалась 560 DIP, при строке 50 DIP
-это ровно десять файлов. По запросу пользователя от 19.09.2026 число вынесено в настройки ползунком от 1
-до 20 (целые значения, `IsSnapToTickEnabled`), по умолчанию 10 — те самые десять, поэтому без вмешательства
-вид не меняется.
+At the same time, and also at the user's request, the plate's right edge was extended: the padding became asymmetric — 8 DIP on the left (exactly the text's own left margin, as the plate is drawn from the start of the column) and 14 on the right. The last character, or the ellipsis of a shortened name, used to press against the edge.
 
-Значение хранится как `maxVisibleItems` в `settings.json`. Файл, записанный до появления поля, читается
-как 10, а не как ошибка схемы; число вне диапазона приводится к границе, как и `backdropOpacity`, — правка
-одного числа руками не должна стоить пользователю списка папок. Ноль приводится к единице: пустая панель
-не даёт откуда вернуться в настройки.
+### The number of files in the list: a slider in the settings — 19.09.2026
 
-Константа 560 DIP при позиционировании заменена на желаемую высоту `20 + N × 50`, ограниченную рабочей
-областью монитора. Монитор остаётся последним словом: на невысоком экране строк будет меньше запрошенного,
-частичных строк по-прежнему нет. Пустое состояние считается от рабочей области, а не от выбранного числа,
-иначе при N=1 короткая надпись не поместилась бы.
+How many rows the panel showed was decided by a single constant: the height was capped at 560 DIP, which with a 50 DIP row is exactly ten files. At the user's request of 19.09.2026 the number was moved into the settings as a slider from 1 to 20 (whole values, `IsSnapToTickEnabled`), 10 by default — those same ten, so the look does not change unless someone changes it.
 
-Модель отдаёт число как `MaxVisibleItems` и сообщает о его изменении отдельным событием `LayoutChanged`:
-движение ползунка перестраивает открытую панель, хотя ни один файл не изменился. Запись на диск отложена
-тем же таймером, что и непрозрачность подложки, — 400 мс после последнего движения и при закрытии окна
-настроек. Предварительный просмотр иконок ограничен тем же числом: спрашивать оболочку о строках,
-которых не будет на экране, — работа, которой пользователь никогда не увидит.
+The value is stored as `maxVisibleItems` in `settings.json`. A file written before the field existed reads as 10 rather than as a schema error; a number out of range is clamped, just like `backdropOpacity` — editing one number by hand must not cost the user their list of folders. Zero is clamped to one: an empty panel leaves nowhere to get back to the settings from.
 
-Максимальная высота окна настроек поднята с 680 до 740 DIP: с новой строкой содержимое занимает от 697
-(японский) до 726 DIP (русский, немецкий), и окно прокручивалось бы при каждом открытии. Проверено
-рендером в PNG на четырёх языках.
+The 560 DIP constant in the positioning code was replaced by a desired height of `20 + N × 50`, constrained by the monitor's work area. The monitor keeps the last word: on a short screen there will be fewer rows than requested, and there are still no partial rows. The empty state is measured against the work area rather than against the chosen number, otherwise at N=1 the short line of text would not fit.
 
-### Мышь не проваливается сквозь панель — 19.09.2026
+The model exposes the number as `MaxVisibleItems` and announces a change to it through a separate `LayoutChanged` event: moving the slider rebuilds the open panel even though not one file changed. The write to disk is deferred by the same timer as the backdrop opacity — 400 ms after the last movement, and on closing the settings window. Icon prefetching is bounded by the same number: asking the shell about rows that will not be on screen is work the user will never see.
 
-Панель — layered-окно (`AllowsTransparency=True`), а Windows проверяет попадание мыши по альфе пикселя:
-там, где альфы нет совсем, курсор и клик уходят в окно позади. Невидимая подложка альфой 1/255 стояла
-только на самих строках, поэтому зазоры между строками (по 2 DIP сверху и снизу) и поле панели в 10 DIP
-оставались сквозными: проводя курсор по списку, пользователь наводился и на приложение на заднем плане.
-Теперь тот же фон `#01000000` покрывает всю поверхность панели. На вид это ничего не меняет (0,4% чёрного),
-но клик по зазору больше не уходит наружу и не закрывает панель как щелчок мимо неё; закрывают её
-по-прежнему Escape, значок в трее и клик вне окна.
+The settings window's maximum height was raised from 680 to 740 DIP: with the new row the content takes from 697 (Japanese) to 726 DIP (Russian, German), and the window would have scrolled every time it opened. Verified by rendering to PNG in four languages.
 
-### Автозапуск при входе в систему — 19.09.2026
+### The mouse no longer falls through the panel — 19.09.2026
 
-По запросу пользователя от 19.09.2026 добавлена настройка «Запускать вместе с Windows» и вся механика за
-ней. Выбран per-user ключ `Run` в `HKCU`, а не запланированная задача и не файл в папке автозагрузки:
-прав администратора не нужно, одна и та же запись одинаково работает у распакованной портативной копии и
-у установленной, и пользователь видит её в «Автозагрузке» диспетчера задач рядом со всем остальным —
-то есть может выключить там, где ищет такие вещи. Значение называется `DownloadsStack`, данные —
-путь к exe в кавычках плюс `--autostart`: путь с пробелом без кавычек Windows прочитает как два
-аргумента и не запустит ничего.
+The panel is a layered window (`AllowsTransparency=True`), and Windows hit-tests the mouse by the pixel's alpha: where there is no alpha at all, the cursor and the click go to the window behind. The invisible 1/255-alpha backdrop was only on the rows themselves, so the gaps between rows (2 DIP above and below) and the panel's 10 DIP margin stayed see-through: running the cursor down the list, the user was also hovering the application in the background. Now the same `#01000000` background covers the panel's whole surface. It looks no different (0.4% black), but a click on a gap no longer goes outside and no longer closes the panel as a click past it; it is still closed by Escape, by the tray icon and by a click outside the window.
 
-Состояние живёт только в реестре. Копии в `settings.json` нет намеренно: тот же переключатель есть в
-диспетчере задач, и файл настроек начал бы врать ровно в тот момент, когда пользователь им
-воспользуется. Окно настроек перечитывает реестр при каждом открытии; чтение одного значения стоит
-микросекунды и выполняется синхронно, потому что показывать надо правду, а не то, что было.
+### Starting at sign-in — 19.09.2026
 
-У состояния три значения, а не два. Windows умеет отключить запись, не удаляя её: команда остаётся, а
-ответ пользователя хранится в `Explorer\StartupApproved\Run`, где младший бит первого байта и есть
-выключатель. Такую запись приложение показывает как включённую галочку плюс отдельная строка о том, что
-Windows отключил автозапуск в диспетчере задач и включить обратно можно только там. Иначе пользователь
-получил бы галочку, которая ничего не делает. Чужой ответ в `StartupApproved` приложение не переписывает
-ни при включении, ни при выключении.
+At the user's request of 19.09.2026, a "Start with Windows" setting and all the machinery behind it were added. The per-user `Run` key in `HKCU` was chosen over a scheduled task or a file in the Startup folder: no administrator rights are needed, one and the same entry works identically for an unpacked portable copy and for an installed one, and the user sees it in Task Manager's Startup apps next to everything else — that is, they can turn it off where they go looking for such things. The value is named `DownloadsStack`, and its data is the path to the exe in quotes plus `--autostart`: a path with a space and no quotes would be read by Windows as two arguments and would launch nothing.
 
-Запись чинится при старте: если файла по записанному пути больше нет, она переписывается на текущий exe.
-Это случай перенесённой портативной папки и случай установщика, заменившего прежнюю копию. Если файл по
-старому пути на месте — не трогаем: один запуск второй копии не должен забирать автозапуск у той,
-которую зарегистрировали. Неудача чинки только пишется в лог: окно настроек всё равно покажет
-настоящее положение дел.
+The state lives only in the registry. There is deliberately no copy in `settings.json`: the same switch exists in Task Manager, and the settings file would start lying the moment the user used it. The settings window re-reads the registry every time it opens; reading one value costs microseconds and is done synchronously, because what has to be shown is the truth, not what used to be true.
 
-Командная строка без окна: `--autostart-on`, `--autostart-off` и `--quit`. Последняя просит работающий
-экземпляр закрыться и возвращается только когда исчезнет его мьютекс, то есть когда процесс
-действительно завершился, — это единственный надёжный признак того, что exe освободился. Протокол
-единственного экземпляра расширен третьей командой (`Exit`) поверх прежних «показать список».
+The state has three values, not two. Windows can disable the entry without deleting it: the command stays and the user's answer is kept in `Explorer\StartupApproved\Run`, where the low bit of the first byte is the switch. Such an entry is shown by the application as a ticked checkbox plus a separate line saying that Windows disabled startup in Task Manager and that it can only be turned back on there. Otherwise the user would get a checkbox that does nothing. The application does not overwrite somebody else's answer in `StartupApproved`, neither when turning startup on nor when turning it off.
 
-### Поставка: портативная версия и установщик — 19.09.2026
+The entry is repaired at startup: if the file at the recorded path is gone, it is rewritten to point at the current exe. That covers a portable folder that was moved and an installer that replaced the previous copy. If the file at the old path is still there, leave it alone: one run of a second copy must not take startup away from the one that was registered. A failed repair is only written to the log: the settings window will show the real state of affairs anyway.
 
-Релиз собирает `scripts/package.ps1` из одной публикации: zip с единственной папкой внутри и MSI.
-Установщик — per-user, в `%LOCALAPPDATA%\Programs\Downloads Stack`, без администратора и без UAC.
-Так и должно быть: приложение принадлежит одному пользователю, его автозапуск — тоже, а рядом со своим
-exe оно пишет ярлык, чего папка под Program Files не позволила бы.
+The windowless command line: `--autostart-on`, `--autostart-off` and `--quit`. The last one asks a running instance to close and returns only once its mutex is gone, that is, once the process has really ended — the only reliable sign that the exe has been released. The single-instance protocol was extended with a third command (`Exit`) on top of the earlier "show the list".
 
-Установщик ключ `Run` не трогает — ни при установке, ни при удалении, — и это результат измерений, а не
-экономия усилий. Изменение реестра, сделанное внутри транзакции Windows Installer, транзакцию не
-переживает: ни `RegistryValue` самого пакета, ни запись программы, запущенной из custom action, которая
-тут же перечитывает её и видит записанной. Цифры и ход проверки — в `CHECKS.md`. Поэтому владелец записи
-один — приложение, и следствие честно записано в README: удаление не убирает автозапуск, если его
-включали.
+### Delivery: portable build and installer — 19.09.2026
 
-Пакет отвечает за то, что у него получается надёжно: файлы, ярлык в «Пуске» с тем же `AppUserModel.ID`,
-удаление ярлыка, который приложение пишет рядом с собой, и остановку работающего экземпляра через
-`--quit` до подмены файлов — иначе обновление заканчивалось бы просьбой перезагрузиться. Действие,
-запускающее exe, стоит после `InstallFinalize`: всё, что запланировано внутри скрипта установки,
-выполняется в момент его составления, когда файлов на диске ещё нет (ошибка 1721).
+`scripts/package.ps1` builds the release from a single publish: a zip with one folder inside, and an MSI. The installer is per-user, into `%LOCALAPPDATA%\Programs\Downloads Stack`, without an administrator and without UAC. That is how it should be: the application belongs to one user, so does its startup entry, and it writes a shortcut next to its own exe, which a folder under Program Files would not allow.
+
+The installer does not touch the `Run` key — neither on install nor on uninstall — and that is the result of measurement, not of saved effort. A registry change made inside a Windows Installer transaction does not survive that transaction: neither the package's own `RegistryValue`, nor a write by a program launched from a custom action which immediately re-reads it and sees it written. The numbers and the course of the check are in `CHECKS.md`. So the entry has one owner, the application, and the consequence is written down honestly in the README: uninstalling does not remove startup if it had been turned on.
+
+The package takes responsibility for what it can do reliably: the files, a Start menu shortcut with the same `AppUserModel.ID`, removal of the shortcut the application writes next to itself, and stopping a running instance through `--quit` before the files are replaced — otherwise an upgrade would end in a request to reboot. The action that launches the exe comes after `InstallFinalize`: everything scheduled inside the installation script runs at the moment the script is composed, when the files are not on disk yet (error 1721).
