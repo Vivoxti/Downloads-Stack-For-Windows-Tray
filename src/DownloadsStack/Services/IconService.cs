@@ -27,11 +27,14 @@ internal sealed class IconService : IDisposable
         var thread = new Thread(Work) { IsBackground = true, Name = "Shell icons (STA)" };
         thread.SetApartmentState(ApartmentState.STA); thread.Start();
     }
+    /// <summary>Files whose own icon differs from every other file of the same kind, so no cache by extension.</summary>
+    private static readonly string[] OwnIcon = [".exe", ".lnk", ".ico", ".url"];
+    private static readonly string[] OwnThumbnail = [".png", ".jpg", ".jpeg", ".mp4"];
     public Task<ImageSource> GetAsync(DownloadItem item)
     {
         var extension = System.IO.Path.GetExtension(item.FullPath);
         var thumbnail = IsThumbnailFile(item.FullPath);
-        var byType = !thumbnail && !new[] { ".exe", ".lnk", ".ico", ".url" }.Contains(extension, StringComparer.OrdinalIgnoreCase);
+        var byType = !thumbnail && !Matches(extension, OwnIcon);
         var key = byType ? "type|" + extension : "file|" + item.CanonicalPath + "|" + item.LastWriteTimeUtc.Ticks;
         lock (_gate)
         {
@@ -48,8 +51,13 @@ internal sealed class IconService : IDisposable
             return completion.Task;
         }
     }
-    internal static bool IsThumbnailFile(string path) => System.IO.Path.GetExtension(path).ToLowerInvariant() is
-        ".png" or ".jpg" or ".jpeg" or ".mp4";
+    private static bool Matches(ReadOnlySpan<char> extension, string[] known)
+    {
+        foreach (var candidate in known)
+            if (extension.Equals(candidate, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+    internal static bool IsThumbnailFile(string path) => Matches(System.IO.Path.GetExtension(path.AsSpan()), OwnThumbnail);
 
     private static ImageSource? GetThumbnail(string path)
     {

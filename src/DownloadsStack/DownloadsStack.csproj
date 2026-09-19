@@ -1,23 +1,32 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
+    <!-- A tray application is judged by how fast it is there. Crossgen removes most of the JIT from the
+         path between launch and the first frame of the flyout.
+         Not Composite: one 157 MB image measured 4.1 s to the first window on a machine that had not read
+         it yet, against 1.3 s here, to save 50 ms once the file is cached. A tray application is started
+         from a cold disk at sign-in, which is exactly the case composite makes worse. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
     <AssemblyName>DownloadsStack</AssemblyName>
     <AssemblyTitle>Downloads Stack</AssemblyTitle>
     <Product>Downloads Stack</Product>
+    <!-- The one place a release is numbered: scripts/package.ps1 reads it for the archive name and for
+         the installer, whose upgrade logic compares these three numbers and nothing else. -->
+    <Version>1.0.0</Version>
+    <Company>Vivoderin</Company>
+    <Copyright>Vivoderin</Copyright>
     <Description>Downloads Stack</Description>
     <StartupObject>DownloadsStack.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup><Resource Include="Assets/app.ico" /></ItemGroup>
   <ItemGroup><Resource Include="Assets/tray.ico" /></ItemGroup>
   <ItemGroup><Resource Include="Assets/tray-active.ico" /></ItemGroup>
-  <ItemGroup><Using Remove="System.Windows.Forms"/><Using Remove="System.Drawing"/></ItemGroup>
   <!-- Copy for shortcuts without declaring the embedded WPF resource as Content. -->
   <Target Name="CopyShortcutIconToOutput" AfterTargets="Build">
     <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/app.ico" DestinationFiles="$(TargetDir)DownloadsStack.App.ico" SkipUnchangedFiles="true" />

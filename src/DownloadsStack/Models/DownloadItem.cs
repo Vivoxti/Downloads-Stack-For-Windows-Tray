@@ -12,6 +12,14 @@ public sealed class DownloadItem : INotifyPropertyChanged
     public required string Name { get; init; }
     public required DateTime EffectiveDateUtc { get; init; }
     public DateTime LastWriteTimeUtc { get; init; }
+    public DateTime CreationTimeUtc { get; init; }
+    /// <summary>
+    /// Read from the directory entry like the others. Windows only maintains it when the volume asks for
+    /// it, and nothing here watches for it changing: the order by this field settles on the next scan.
+    /// </summary>
+    public DateTime LastAccessTimeUtc { get; init; }
+    /// <summary>Everything <see cref="Services.FileRules"/> sorts on, without touching the disk again.</summary>
+    public SortKey Key => new(EffectiveDateUtc, LastWriteTimeUtc, CreationTimeUtc, LastAccessTimeUtc, Name, FullPath);
     private bool _duplicateName;
     private ImageSource? _icon;
     public bool DuplicateName { get => _duplicateName; set { _duplicateName = value; Changed(); } }
@@ -21,4 +29,10 @@ public sealed class DownloadItem : INotifyPropertyChanged
 }
 
 public sealed record IndexEntry(string SourceId, string Path, DateTime EffectiveDateUtc);
-public sealed record FileStamp(long Length, DateTime LastWriteTimeUtc);
+/// <summary>
+/// One file reduced to what an ordering compares. A struct with no work in it: a source ranks thousands
+/// of these per scan, and building one must cost nothing but copying fields that were already read.
+/// </summary>
+public readonly record struct SortKey(DateTime Added, DateTime Modified, DateTime Created, DateTime Accessed, string Name, string Path);
+/// <summary>A struct: a scan holds one of these per file of the folder, and they must not be objects.</summary>
+public readonly record struct FileStamp(long Length, DateTime LastWriteTimeUtc);

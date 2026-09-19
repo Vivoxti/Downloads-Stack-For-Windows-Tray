@@ -25,6 +25,11 @@ public sealed class SettingsStore
                         (s.Kind == "directory" && (string.IsNullOrWhiteSpace(s.Path) || !Path.IsPathFullyQualified(s.Path)))) ||
                     data.Sources.Select(s => s.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != data.Sources.Count)
                     throw new JsonException(Loc.T("Error_SettingsShape"));
+                // A number outside the slider's range is not a damaged file: bring it back in rather than
+                // throwing the user's folder list away over it.
+                if (data.BackdropOpacity is < 0 or > 100) data = data with { BackdropOpacity = Math.Clamp(data.BackdropOpacity, 0, 100) };
+                if (data.MaxVisibleItems < SettingsData.MinVisibleItems || data.MaxVisibleItems > SettingsData.MaxVisibleItemsLimit)
+                    data = data with { MaxVisibleItems = Math.Clamp(data.MaxVisibleItems, SettingsData.MinVisibleItems, SettingsData.MaxVisibleItemsLimit) };
                 return (Data: data, Message: (string?)null, Save: false);
             }
             catch (Exception ex) when (ex is JsonException or NotSupportedException or ArgumentException)

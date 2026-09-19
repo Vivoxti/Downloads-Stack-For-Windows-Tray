@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- Test fixtures paint bitmaps with System.Drawing. The application itself no longer references it. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -16,6 +18,8 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
     <ProjectReference Include="../../src/DownloadsStack/DownloadsStack.csproj" />
   </ItemGroup>
 

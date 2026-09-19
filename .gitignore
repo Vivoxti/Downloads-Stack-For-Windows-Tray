@@ -4,3 +4,9 @@ artifacts/
 .vs/
 TestResults/
 *.user
+
+# The hand-check build from scripts/dev-build.ps1.
+Downloads Stack.exe
+DownloadsStack.App.ico
+Downloads Stack.lnk
+ui-check.log

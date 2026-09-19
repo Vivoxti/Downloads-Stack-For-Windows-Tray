@@ -23,6 +23,14 @@ public class FileRulesTests
     [InlineData("file")]
     public void OrdinaryNamesIncluded(string name) => Assert.True(FileRules.Include(name, FileAttributes.Normal));
     [Fact]
+    public void IncludeJudgesTheNameWhereTheEnumeratorPutIt()
+    {
+        // A scan hands in a slice of the enumerator's own buffer. Nothing here may need a string of its own.
+        ReadOnlySpan<char> buffer = "...report.crdownload...";
+        Assert.False(FileRules.Include(buffer.Slice(3, 17), FileAttributes.Normal));
+        Assert.True(FileRules.Include(buffer.Slice(3, 6), FileAttributes.Normal));
+    }
+    [Fact]
     public void NormalizePreservesRootsAndTrimsOnlyNonRootSeparator()
     {
         Assert.Equal(@"C:\", FileRules.Normalize(@"C:\"));
@@ -45,6 +53,30 @@ public class FileRulesTests
         var ties = FileRules.Merge([Item(@"C:\z\b.txt", date), Item(@"C:\z\a.txt", date), Item(@"C:\a\a.txt", date)]);
         Assert.Equal(new[] { @"C:\a\a.txt", @"C:\z\a.txt", @"C:\z\b.txt" }, ties.Select(i => i.FullPath));
         Assert.True(ties[0].DuplicateName); Assert.True(ties[1].DuplicateName); Assert.False(ties[2].DuplicateName);
+    }
+    [Fact]
+    public void EveryFieldOrdersTheListAndTheReverseFlagTurnsItEndForEnd()
+    {
+        var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        // Each file leads on exactly one field, so a comparison that reads the wrong one cannot pass.
+        DownloadItem Make(string name, int added, int modified, int created, int accessed) => new()
+        {
+            SourceId = "one", FullPath = @"C:\f\" + name, CanonicalPath = @"C:\f\" + name, Name = name,
+            EffectiveDateUtc = epoch.AddHours(added), LastWriteTimeUtc = epoch.AddHours(modified),
+            CreationTimeUtc = epoch.AddHours(created), LastAccessTimeUtc = epoch.AddHours(accessed)
+        };
+        var items = new[] { Make("b.txt", 1, 3, 2, 1), Make("a.zip", 2, 1, 3, 3), Make("c.md", 3, 2, 1, 2) };
+        Assert.Equal(new[] { "c.md", "a.zip", "b.txt" }, Names(SortField.DateAdded));
+        Assert.Equal(new[] { "a.zip", "b.txt", "c.md" }, Names(SortField.Name));
+        Assert.Equal(new[] { "c.md", "b.txt", "a.zip" }, Names(SortField.Type)); // .md, .txt, .zip
+        Assert.Equal(new[] { "b.txt", "c.md", "a.zip" }, Names(SortField.DateModified));
+        Assert.Equal(new[] { "a.zip", "b.txt", "c.md" }, Names(SortField.DateCreated));
+        Assert.Equal(new[] { "a.zip", "c.md", "b.txt" }, Names(SortField.DateAccessed));
+        // Whatever it is keyed on, the flag gives back the same list read from the other end.
+        foreach (var field in Enum.GetValues<SortField>())
+            Assert.Equal(Names(field).Reverse(), Names(field, true));
+        string[] Names(SortField field, bool reversed = false) =>
+            FileRules.Merge(items, new(field, reversed)).Select(i => i.Name).ToArray();
     }
     [Fact]
     public void MergeNeverChangesItemsAlreadyBoundToUi()

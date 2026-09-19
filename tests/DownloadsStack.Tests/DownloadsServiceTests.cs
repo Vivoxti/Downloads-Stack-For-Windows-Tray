@@ -37,6 +37,27 @@ public class DownloadsServiceTests
         File.Delete(renamed); await WaitAsync(channel.Reader, s => s.Items.Count == 1 && s.Items[0].Name == "new.txt");
     }
     [Fact]
+    public async Task ChangingTheOrderResortsWhatIsKnownWithoutReadingTheFolderAgain()
+    {
+        using var files = new TestDirectory(); using var data = new TestDirectory();
+        var older = files.File("b.txt"); var newer = files.File("a.txt");
+        File.SetCreationTimeUtc(older, DateTime.UtcNow.AddYears(-2)); File.SetCreationTimeUtc(newer, DateTime.UtcNow.AddYears(-1));
+        using var service = new DownloadsService(new(data.Path));
+        var channel = Channel.CreateUnbounded<DownloadsSnapshot>(); service.Updated += s => channel.Writer.TryWrite(s);
+        service.ApplySources([new FolderSource { Path = files.Path }]);
+        var byDate = await WaitAsync(channel.Reader, s => s.Items.Count == 2 && !s.Sources[0].IsUnavailable);
+        Assert.Equal(new[] { "a.txt", "b.txt" }, byDate.Items.Select(i => i.Name));
+        // This file lands first and is deliberately absent from the snapshot below: a re-sort answers from
+        // what the source already holds, so nothing here is read from the folder a second time.
+        files.File("c.txt");
+        service.ApplyOrder(new(SortField.Name, true));
+        var byName = await WaitAsync(channel.Reader, s => s.Items.Count == 2);
+        Assert.Equal(new[] { "b.txt", "a.txt" }, byName.Items.Select(i => i.Name));
+        // The watcher still has the last word: the new file arrives on its own, in the chosen order.
+        var settled = await WaitAsync(channel.Reader, s => s.Items.Count == 3);
+        Assert.Equal(new[] { "c.txt", "b.txt", "a.txt" }, settled.Items.Select(i => i.Name));
+    }
+    [Fact]
     public async Task UnavailableSourceDoesNotHideOthersAndRemovalRetiresInFlightScan()
     {
         using var files = new TestDirectory(); using var data = new TestDirectory(); files.File("ok.txt");
@@ -141,6 +162,50 @@ public class DownloadsServiceTests
         for (var i = 0; i < 10; ++i) { service.Refresh(); await Task.Delay(60); }
         await Task.Delay(400);
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(8), $"ten rescans took {watch.Elapsed}");
+    }
+    [Fact]
+    public async Task RescanningASettledFolderCostsNothingPerFile()
+    {
+        using var files = new TestDirectory(); using var data = new TestDirectory();
+        for (var i = 0; i < 2000; ++i) files.File($"{i:0000}-a-reasonably-long-download-name.bin", "x");
+        using var service = new DownloadsService(new(data.Path));
+        var channel = Channel.CreateUnbounded<DownloadsSnapshot>(); service.Updated += s => channel.Writer.TryWrite(s);
+        service.ApplySources([new() { Path = files.Path }]);
+        await WaitAsync(channel.Reader, s => s.Items.Count == 100);
+        await Task.Delay(1500);
+        while (channel.Reader.TryRead(out _)) { }
+        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+        var before = GC.GetTotalAllocatedBytes(true);
+        for (var i = 0; i < 10; ++i) { service.Refresh(); await Task.Delay(80); }
+        await Task.Delay(600);
+        var allocated = GC.GetTotalAllocatedBytes(true) - before;
+        // Every pass used to copy the whole folder into fresh dictionaries, candidates and items: about
+        // 3 MB per scan at this size, and a scan runs on every write into a watched folder. A file that has
+        // not moved must now cost nothing at all — not even the string of its own name.
+        Assert.True(allocated < 1_000_000, $"{allocated / 1024} KB allocated over ten rescans of 2000 files");
+    }
+    [Fact]
+    public async Task TwoCrowdedFoldersStillPublishTheNewestHundredOfBoth()
+    {
+        using var first = new TestDirectory(); using var second = new TestDirectory(); using var data = new TestDirectory();
+        var epoch = new DateTime(2021, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        for (var i = 0; i < 150; ++i)
+        {
+            File.SetCreationTimeUtc(first.File($"a{i:000}.txt", ""), epoch.AddMinutes(i * 2));
+            File.SetCreationTimeUtc(second.File($"b{i:000}.txt", ""), epoch.AddMinutes(i * 2 + 1));
+        }
+        using var service = new DownloadsService(new(data.Path));
+        var channel = Channel.CreateUnbounded<DownloadsSnapshot>(); service.Updated += s => channel.Writer.TryWrite(s);
+        service.ApplySources([new() { Path = first.Path }, new() { Path = second.Path }]);
+        // Both sources have to have finished: a snapshot taken while one is still probing holds only the other.
+        var snapshot = await WaitAsync(channel.Reader, s => s.Items.Count == 100 && s.Sources.Count == 2 && s.Sources.All(x => x.State == SourceState.Ready));
+        // A source now drops everything past the global limit before it publishes anything. The merged list
+        // still has to be the newest hundred across sources, not the newest fifty of each.
+        Assert.Equal("b149.txt", snapshot.Items[0].Name);
+        Assert.Equal("a149.txt", snapshot.Items[1].Name);
+        Assert.Equal("a100.txt", snapshot.Items[^1].Name);
+        Assert.Equal(50, snapshot.Items.Count(i => i.Name[0] == 'a'));
+        Assert.Equal(50, snapshot.Items.Count(i => i.Name[0] == 'b'));
     }
     [Fact]
     public async Task RenameWhileScanIsWaitingForStabilityKeepsOriginalDate()

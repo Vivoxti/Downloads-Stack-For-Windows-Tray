@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A per-user installer. No administrator rights are asked for and nothing is written outside the user's
+  own profile: the application is a tray utility that starts at that user's sign-in, and the executable
+  writes a shortcut next to itself, which a folder under Program Files would forbid.
+
+  The package leaves the sign-in entry alone, on the way in and on the way out. The application owns it:
+  one switch in its settings, the same switch for a portable copy and an installed one. That is not for
+  want of trying — a registry change made from inside a Windows Installer transaction did not outlive
+  it here, whether the package made it or a program the package ran. CHECKS.md has the measurements.
+  Uninstalling therefore leaves a startup entry the user switched on; the README says so.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Downloads Stack" Manufacturer="Vivoderin" Version="$(Version)" Scope="perUser" Compressed="yes"
+           UpgradeCode="F3F82516-6B43-446F-B820-69C1F16551B1" Language="1033" Codepage="1252">
+    <SummaryInformation Description="Downloads Stack — recent files from the folders you choose" />
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of Downloads Stack is already installed. Remove it first to install this one." />
+    <!-- 603 is as high as Windows Installer ever reports: it says 603 on Windows 10 and on Windows 11
+         alike, so a larger number here would refuse to install anywhere at all. -->
+    <Launch Condition="Installed OR VersionNT64 &gt;= 603" Message="Downloads Stack needs 64-bit Windows 10 or Windows 11." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="AppIcon" SourceFile="$(PublishDir)\DownloadsStack.App.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Vivoderin/WindowsToolbarDownloadList" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Downloads Stack" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Downloads Stack" Level="1">
+      <ComponentGroupRef Id="ApplicationFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="LeftoverFiles" />
+    </Feature>
+
+    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(PublishDir)\**" />
+    </ComponentGroup>
+
+    <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder" Guid="2C1F7B84-5B2E-4C27-9E56-1C1B8B0F64A1">
+      <!-- The same identity the application sets on itself and on the shortcut it writes, so Windows
+           groups the tray application, its window and this entry as one program. -->
+      <Shortcut Id="ApplicationShortcut" Name="Downloads Stack" Icon="AppIcon"
+                Description="A single list of recent files from the folders you choose"
+                Target="[INSTALLFOLDER]Downloads Stack.exe" WorkingDirectory="INSTALLFOLDER">
+        <ShortcutProperty Key="System.AppUserModel.ID" Value="Vivoderin.DownloadsStack" />
+      </Shortcut>
+      <RegistryValue Root="HKCU" Key="Software\Vivoderin\Downloads Stack" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="LeftoverFiles" Directory="INSTALLFOLDER" Guid="9B0A6E52-7F13-4D41-8B64-3E9C0D5A2F77">
+      <!-- The application writes this shortcut next to itself on first run; the installer never sees it. -->
+      <RemoveFile Id="RemoveOwnShortcut" Name="Downloads Stack.lnk" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\Vivoderin\Downloads Stack" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+      <!-- No RemoveRegistryValue for the startup entry, however tempting it looks: that element compiles
+           into the RemoveRegistry table, which Windows Installer processes when a component is INSTALLED,
+           not when one is removed. -->
+    </Component>
+
+    <CustomAction Id="QuitRunningApplication" Directory="INSTALLFOLDER" Execute="immediate" Return="ignore"
+                  ExeCommand="&quot;[INSTALLFOLDER]Downloads Stack.exe&quot; --quit" />
+    <CustomAction Id="LaunchApplication" Directory="INSTALLFOLDER" Execute="immediate" Return="asyncNoWait"
+                  ExeCommand="&quot;[INSTALLFOLDER]Downloads Stack.exe&quot;" />
+
+    <InstallExecuteSequence>
+      <!-- A tray application holds its own executable open. Asking it to exit before anything is replaced
+           is what keeps an upgrade or a removal from ending in “restart your computer”. -->
+      <Custom Action="QuitRunningApplication" Before="InstallValidate" Condition="Installed OR WIX_UPGRADE_DETECTED" />
+      <!-- After InstallFinalize, because everything scheduled inside the installation script runs while
+           that script is being written, when the files are not on disk yet: an earlier action placed
+           after InstallFiles failed with 1721, “a program required for this install could not be run”. -->
+      <Custom Action="LaunchApplication" After="InstallFinalize" Condition="NOT Installed AND NOT REMOVE" />
+    </InstallExecuteSequence>
+  </Package>
+</Wix>

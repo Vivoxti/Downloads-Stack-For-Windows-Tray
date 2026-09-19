@@ -1,7 +1,10 @@
 <Window x:Class="DownloadsStack.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:DownloadsStack.Controls" xmlns:loc="clr-namespace:DownloadsStack.Localization"
         Title="Downloads Stack" Style="{StaticResource {x:Type Window}}" Background="Transparent" AllowsTransparency="True" Foreground="{StaticResource TextBrush}" Icon="Assets/app.ico" Width="392" Height="260" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False">
     <Window.Resources><BooleanToVisibilityConverter x:Key="BooleanVisibility"/></Window.Resources>
-    <Border x:Name="FlyoutSurface" Background="Transparent" Padding="10" RenderTransformOrigin="0.5,1" Opacity="0">
+    <!-- The same 1/255 alpha as a row, over the whole panel: on a layered window Windows sends the mouse
+         straight through a pixel with no alpha at all, so the padding and the gaps between rows were holes
+         onto whatever stood behind the flyout. -->
+    <Border x:Name="FlyoutSurface" Background="#01000000" Padding="10" RenderTransformOrigin="0.5,1" Opacity="0">
         <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="FlyoutScale"/><TranslateTransform x:Name="FlyoutOffset"/></TransformGroup></Border.RenderTransform>
         <Grid>
             <ListBox x:Name="FileList" AutomationProperties.Name="{Binding [List_Name], Source={x:Static loc:Loc.Text}}" FocusVisualStyle="{x:Null}"
@@ -32,7 +35,7 @@
                     </Image>
                     <Grid Grid.Column="1" CacheMode="BitmapCache">
                     <Canvas Height="22" VerticalAlignment="Center" IsHitTestVisible="False">
-                    <Border Width="{Binding BackdropWidth, ElementName=FileLabel}" Height="22" Background="#D9101114" CornerRadius="8">
+                    <Border Width="{Binding BackdropWidth, ElementName=FileLabel}" Height="22" Background="{Binding DataContext.BackdropBrush, RelativeSource={RelativeSource AncestorType=Window}}" CornerRadius="8">
                         <Border.Effect><BlurEffect Radius="6" RenderingBias="Quality"/></Border.Effect>
                     </Border>
                     </Canvas>

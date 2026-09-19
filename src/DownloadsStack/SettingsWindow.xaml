@@ -1,48 +1,123 @@
-﻿<Window x:Class="DownloadsStack.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:loc="clr-namespace:DownloadsStack.Localization"
-        Title="{Binding [Settings_Title], Source={x:Static loc:Loc.Text}}" Style="{StaticResource {x:Type Window}}" Background="Transparent" Foreground="{StaticResource TextBrush}" Width="520" SizeToContent="Height" MaxHeight="560" ShowInTaskbar="False" WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize">
+<Window x:Class="DownloadsStack.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:loc="clr-namespace:DownloadsStack.Localization"
+        Title="{Binding [Settings_Title], Source={x:Static loc:Loc.Text}}" Style="{StaticResource {x:Type Window}}" Background="Transparent" Foreground="{StaticResource TextBrush}" Width="520" SizeToContent="Height" MaxHeight="740" ShowInTaskbar="False" WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize">
     <WindowChrome.WindowChrome><WindowChrome CaptionHeight="42" ResizeBorderThickness="0" GlassFrameThickness="-1" CornerRadius="8" UseAeroCaptionButtons="False"/></WindowChrome.WindowChrome>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanVisibility"/>
+        <!-- Three groups of one kind of setting each, so nothing has to be told apart by reading it. -->
+        <Style x:Key="GroupCaption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="2,0,2,9"/>
+        </Style>
+        <Style x:Key="GroupRule" TargetType="Border">
+            <Setter Property="Height" Value="1"/><Setter Property="Background" Value="{StaticResource LineBrush}"/><Setter Property="Margin" Value="0,16,0,16"/>
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+            <Setter Property="FontSize" Value="11"/><Setter Property="Margin" Value="2,6,2,0"/>
+        </Style>
     </Window.Resources>
     <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
         <Grid>
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-            <TextBlock Text="{Binding [Settings_Heading], Source={x:Static loc:Loc.Text}}" FontSize="15" FontWeight="SemiBold" Margin="2,0,0,10"/>
-            <Border Grid.Row="1" MinHeight="54" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="3">
-                <ListBox x:Name="FolderList" MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Auto" ItemsSource="{Binding Sources}" AutomationProperties.Name="{Binding [Settings_ListName], Source={x:Static loc:Loc.Text}}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-                        <Setter Property="Padding" Value="9,7"/><Setter Property="MinHeight" Value="0"/><Setter Property="Margin" Value="0,1"/>
-                    </Style></ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" Foreground="{StaticResource MutedBrush}" FontSize="15" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="{Binding DisplayPath}" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" Visibility="{Binding ShowStatus, Converter={StaticResource BooleanVisibility}}"/>
-                        </StackPanel>
-                    </Grid></DataTemplate></ListBox.ItemTemplate>
-                </ListBox>
-            </Border>
-            <StackPanel Grid.Row="2">
-                <!-- Damaged settings, an unwritable index or a failed shortcut had nowhere to be seen. -->
-                <TextBlock Text="{Binding Error}" TextWrapping="Wrap" Foreground="#FF99A4" Margin="2,10,2,0"
-                           Visibility="{Binding HasError, Converter={StaticResource BooleanVisibility}}"/>
-                <TextBlock x:Name="Message" TextWrapping="Wrap" Foreground="#FF99A4" Margin="2,10,2,0">
-                    <TextBlock.Style><Style TargetType="TextBlock">
-                        <Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers>
-                    </Style></TextBlock.Style>
-                </TextBlock>
-            </StackPanel>
-            <Grid Grid.Row="3" Margin="0,11,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <!-- Wrapping keeps every button at its natural width in long-worded languages. -->
-                <WrapPanel x:Name="Actions">
+            <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <!-- The window grows to its content and stops at MaxHeight. Past that the settings scroll rather
+                 than pushing Done off the bottom, which a long folder list or a long error message both do. -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,4,0"><!-- Clear of the scroll bar on the rare occasion it appears. -->
+                <TextBlock Style="{StaticResource GroupCaption}" Text="{Binding [Settings_Heading], Source={x:Static loc:Loc.Text}}"/>
+                <Border MinHeight="54" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="3">
+                    <ListBox x:Name="FolderList" MaxHeight="240" ScrollViewer.VerticalScrollBarVisibility="Auto" ItemsSource="{Binding Sources}" AutomationProperties.Name="{Binding [Settings_ListName], Source={x:Static loc:Loc.Text}}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                            <Setter Property="Padding" Value="9,7"/><Setter Property="MinHeight" Value="0"/><Setter Property="Margin" Value="0,1"/>
+                        </Style></ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE8B7;" FontFamily="Segoe Fluent Icons" Foreground="{StaticResource MutedBrush}" FontSize="15" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding DisplayPath}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" Visibility="{Binding ShowStatus, Converter={StaticResource BooleanVisibility}}"/>
+                            </StackPanel>
+                        </Grid></DataTemplate></ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+                <!-- These act on the list above, so they stand under it rather than beside Done. Wrapping
+                     keeps every button at its natural width in long-worded languages, and the negative
+                     margin cancels the 3 DIP each button carries so they line up with the list. -->
+                <WrapPanel x:Name="Actions" Margin="-3,7,-3,0">
                     <Button Content="{Binding [Settings_AddFolder], Source={x:Static loc:Loc.Text}}" Click="AddFolder"/>
                     <Button Content="{Binding [Settings_AddDownloads], Source={x:Static loc:Loc.Text}}" Click="AddDownloads" Visibility="{Binding CanAddDownloads, Converter={StaticResource BooleanVisibility}}"/>
                     <Button x:Name="RemoveButton" Content="{Binding [Settings_Remove], Source={x:Static loc:Loc.Text}}" Click="RemoveFolder" IsEnabled="False"/>
                     <Button Content="{Binding [Settings_Retry], Source={x:Static loc:Loc.Text}}" Click="Retry" Visibility="{Binding HasUnavailable, Converter={StaticResource BooleanVisibility}}"/>
                 </WrapPanel>
-                <Button Grid.Column="1" Content="{Binding [Settings_Done], Source={x:Static loc:Loc.Text}}" IsDefault="True" IsCancel="True" Click="Done" Style="{StaticResource AccentButton}" MinWidth="84" VerticalAlignment="Bottom"/>
-            </Grid>
+
+                <Border Style="{StaticResource GroupRule}"/>
+
+                <TextBlock Style="{StaticResource GroupCaption}" Text="{Binding [Settings_Sort], Source={x:Static loc:Loc.Text}}"/>
+                <!-- One-way like every control here: the model answers a save, and a two-way binding would write back into it. -->
+                <Grid Margin="2,0,2,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <!-- An explicit template rather than DisplayMemberPath: the closed box renders through
+                         SelectionBoxItemTemplate, which a display path does not reach in a custom template. -->
+                    <ComboBox x:Name="SortBox" ItemsSource="{Binding SortOptions}" SelectedValuePath="Field" SelectedValue="{Binding SortBy, Mode=OneWay}"
+                              AutomationProperties.Name="{Binding [Settings_Sort], Source={x:Static loc:Loc.Text}}" SelectionChanged="SortFieldChanged">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Text}"/></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox x:Name="SortReverse" Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center"
+                              Content="{Binding [Settings_SortReverse], Source={x:Static loc:Loc.Text}}"
+                              IsChecked="{Binding SortReversed, Mode=OneWay}" Checked="SortReverseChanged" Unchecked="SortReverseChanged"/>
+                </Grid>
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding [Settings_SortHint], Source={x:Static loc:Loc.Text}}"/>
+
+                <Border Style="{StaticResource GroupRule}"/>
+
+                <TextBlock Style="{StaticResource GroupCaption}" Text="{Binding [Settings_Startup], Source={x:Static loc:Loc.Text}}"/>
+                <CheckBox x:Name="RunAtLogon" Margin="2,0,2,0" Content="{Binding [Settings_RunAtLogon], Source={x:Static loc:Loc.Text}}"
+                          IsChecked="{Binding RunAtLogon, Mode=OneWay}" Checked="RunAtLogonChanged" Unchecked="RunAtLogonChanged"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="30,5,2,0" Text="{Binding [Settings_RunAtLogonHint], Source={x:Static loc:Loc.Text}}"/>
+                <!-- Registered and switched off under “Startup apps”: the box is honestly ticked, and only
+                     the user can undo that, there. Saying nothing would leave a tick that does nothing. -->
+                <TextBlock x:Name="StartupBlocked" Style="{StaticResource Hint}" Margin="30,5,2,0" Foreground="#FF99A4"
+                           Text="{Binding [Settings_RunAtLogonBlocked], Source={x:Static loc:Loc.Text}}"
+                           Visibility="{Binding AutostartBlocked, Converter={StaticResource BooleanVisibility}}"/>
+
+                <Border Style="{StaticResource GroupRule}"/>
+
+                <TextBlock Style="{StaticResource GroupCaption}" Text="{Binding [Settings_Appearance], Source={x:Static loc:Loc.Text}}"/>
+                <Grid Margin="2,0,2,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding [Settings_Count], Source={x:Static loc:Loc.Text}}" VerticalAlignment="Center"/>
+                    <!-- Whole files only: snapping to ticks keeps the thumb on the number beside it. -->
+                    <Slider x:Name="VisibleCount" Grid.Column="1" Margin="12,0,10,0" Minimum="1" Maximum="20" SmallChange="1" LargeChange="5"
+                            TickFrequency="1" IsSnapToTickEnabled="True"
+                            AutomationProperties.Name="{Binding [Settings_Count], Source={x:Static loc:Loc.Text}}"
+                            Value="{Binding MaxVisibleItems, Mode=OneWay}" ValueChanged="VisibleCountChanged"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Value, ElementName=VisibleCount, StringFormat={}{0:0}}" MinWidth="34"
+                               TextAlignment="Right" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                </Grid>
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding [Settings_CountHint], Source={x:Static loc:Loc.Text}}"/>
+                <Grid Margin="2,15,2,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding [Settings_Backdrop], Source={x:Static loc:Loc.Text}}" VerticalAlignment="Center"/>
+                    <Slider x:Name="Backdrop" Grid.Column="1" Margin="12,0,10,0" Minimum="0" Maximum="100" SmallChange="1" LargeChange="10"
+                            AutomationProperties.Name="{Binding [Settings_Backdrop], Source={x:Static loc:Loc.Text}}"
+                            Value="{Binding BackdropOpacity, Mode=OneWay}" ValueChanged="BackdropChanged"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Value, ElementName=Backdrop, StringFormat={}{0:0}%}" MinWidth="34"
+                               TextAlignment="Right" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                </Grid>
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding [Settings_BackdropHint], Source={x:Static loc:Loc.Text}}"/>
+                <CheckBox x:Name="Hardware" Margin="2,15,2,0" Content="{Binding [Settings_Hardware], Source={x:Static loc:Loc.Text}}"
+                          IsChecked="{Binding HardwareRendering, Mode=OneWay}" Checked="HardwareChanged" Unchecked="HardwareChanged"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="30,5,2,0" Text="{Binding [Settings_HardwareHint], Source={x:Static loc:Loc.Text}}"/>
+
+                <!-- Damaged settings, an unwritable index or a failed shortcut had nowhere to be seen. -->
+                <TextBlock Text="{Binding Error}" TextWrapping="Wrap" Foreground="#FF99A4" Margin="2,14,2,0"
+                           Visibility="{Binding HasError, Converter={StaticResource BooleanVisibility}}"/>
+                <TextBlock x:Name="Message" TextWrapping="Wrap" Foreground="#FF99A4" Margin="2,14,2,0">
+                    <TextBlock.Style><Style TargetType="TextBlock">
+                        <Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers>
+                    </Style></TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+            </ScrollViewer>
+            <Button Grid.Row="1" Content="{Binding [Settings_Done], Source={x:Static loc:Loc.Text}}" IsDefault="True" IsCancel="True" Click="Done"
+                    Style="{StaticResource AccentButton}" MinWidth="84" HorizontalAlignment="Right" Margin="0,18,0,0"/>
         </Grid>
     </Border>
 </Window>

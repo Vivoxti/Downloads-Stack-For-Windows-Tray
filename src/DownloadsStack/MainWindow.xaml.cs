@@ -23,11 +23,17 @@ public partial class MainWindow : Window
     private bool _dragConsumed;
     private bool _ownedInteraction;
     private nint _lastMonitor;
+    // Asking the display driver for its refresh rate is a real round trip, and positioning happens on every
+    // snapshot. Neither the rate nor the scale of a monitor changes without a message saying so.
+    private nint _displayMonitor;
+    private double _displayScale = 1;
     private readonly MainViewModel _model;
     private string? _selectedPath;
     private int _menuDepth;
     private ListBoxItem? _contextRow;
     private ContextMenu? _trayMenu;
+    private DispatcherTimer? _trayMenuWatch;
+    private nint _trayMenuOwner, _trayMenuReturnTo;
     private SettingsWindow? _settingsWindow;
     private DownloadItem[] _visibleItems = [];
     private bool _exitAfterDrag;
@@ -38,6 +44,9 @@ public partial class MainWindow : Window
     internal int AnimationFrameRate { get; private set; } = 60;
     internal bool AnimationsEnabled { get; set; } = SystemParameters.ClientAreaAnimation;
     internal Func<nint> ForegroundWindow { get; set; } = NativeMethods.GetForegroundWindow;
+    internal Action<nint> ActivateOperation { get; set; } = hwnd => NativeMethods.SetForegroundWindow(hwnd);
+    /// <summary>The hidden window the tray icon posts to; the only window this application can put in front while the flyout is closed.</summary>
+    internal nint TrayOwnerHandle { get; set; }
     internal Action<string, nint> DragOperation { get; set; } = (path, hwnd) => ShellService.Drag(path, hwnd);
     internal Action<string> OpenOperation { get; set; } = ShellService.OpenFile;
     internal Func<string, nint, int, int, bool> ContextMenuOperation { get; set; } = ShellContextMenu.Show;
@@ -77,6 +86,8 @@ public partial class MainWindow : Window
         {
             PositionWindow(false);
         };
+        // Moving the count slider changes how many rows fit without changing a single file.
+        _model.LayoutChanged += () => PositionWindow(false);
         Deactivated += (_, _) => Dispatcher.BeginInvoke(CheckDeactivation, DispatcherPriority.Background);
         StateChanged += (_, _) =>
         {
@@ -96,6 +107,9 @@ public partial class MainWindow : Window
             if (e.Key == Key.Enter && FileList.IsKeyboardFocusWithin && FileList.SelectedItem is DownloadItem file && ListState != ListWindowState.Dragging) { Open(file.FullPath); e.Handled = true; }
         };
     }
+
+    /// <summary>Settles the renderer before any window here is given one. See MainViewModel.</summary>
+    public Task ApplyRenderModeAsync() => _model.ApplyRenderModeAsync();
 
     public Task InitializeAsync()
     {
@@ -120,6 +134,7 @@ public partial class MainWindow : Window
 
     public void ToggleFromTray()
     {
+        CloseTrayMenu(); // A left click on the icon dismisses the menu even when it toggles nothing.
         // The tray icon keeps delivering clicks inside a modal loop; the flyout must stay out of the way.
         if (ListState is ListWindowState.Dragging or ListWindowState.Exiting || _ownedInteraction) return;
         // Clicking the tray first deactivates the flyout. Do not reopen it on MouseClick.
@@ -137,17 +152,93 @@ public partial class MainWindow : Window
         menu.Closed += MenuClosed;
         // WPF raises Closed once the popup is really gone, so a replaced menu reports in late: clearing
         // unconditionally would drop the reference to its successor and leave that one open for good.
-        menu.Closed += (_, _) => { if (ReferenceEquals(_trayMenu, menu)) _trayMenu = null; };
+        menu.Closed += (_, _) => { if (ReferenceEquals(_trayMenu, menu)) { _trayMenu = null; EndTrayMenu(); } };
         _trayMenu = menu;
+        // A tray click activates nothing, and a popup put up by a background process captures neither the
+        // mouse nor the keyboard: every click outside it goes to whatever owns the foreground instead, so
+        // the menu survives all of them and only its own items can close it. Taking the foreground first
+        // is what makes Esc, a click anywhere else and switching applications dismiss it (KB135788).
+        var owner = TrayOwnerHandle != 0 ? TrayOwnerHandle : new WindowInteropHelper(this).Handle;
+        var previous = ForegroundWindow();
+        _trayMenuOwner = owner;
+        _trayMenuReturnTo = previous == owner ? 0 : previous;
+        if (owner != 0) ActivateOperation(owner);
         menu.IsOpen = true;
+        menu.Focus(); // Keyboard focus inside the popup is what Esc and the arrow keys need.
+        WatchTrayMenu();
     }
 
     internal void CloseTrayMenu()
     {
-        if (_trayMenu is null) return;
+        if (_trayMenu is null) { EndTrayMenu(); return; }
         var menu = _trayMenu;
         _trayMenu = null;
         menu.IsOpen = false;
+        EndTrayMenu();
+    }
+
+    /// <summary>
+    /// A popup only ever hears about input that is delivered to this process, and a menu put up for a tray
+    /// click gets none: the click that opened it never made this application active, so WPF's own dismissal
+    /// - a mouse capture over the whole desktop - is refused, and the menu sits there through everything
+    /// the user does next. Asking the system directly is the only account of that input we can rely on:
+    /// a button pressed anywhere outside the popup, Escape, or the foreground moving off to somebody else.
+    /// </summary>
+    private void WatchTrayMenu()
+    {
+        _trayMenuWatch?.Stop();
+        _trayMenuWatch = new DispatcherTimer(TimeSpan.FromMilliseconds(50), DispatcherPriority.Background, (_, _) =>
+        {
+            if (_trayMenu is not { IsOpen: true }) { CloseTrayMenu(); return; }
+            var menu = MenuHandle(_trayMenu);
+            var foreground = ForegroundWindow();
+            var ours = foreground == 0 || foreground == _trayMenuOwner || foreground == menu
+                || foreground == new WindowInteropHelper(this).Handle;
+            // The popup has no window of its own for that first instant, and nothing can be outside a menu
+            // that is not on screen yet.
+            var outside = menu != 0 && PointerButtonDown() && WindowUnderPointer() != menu;
+            if (!ours || Pressed(0x1B) || outside) CloseTrayMenu();
+        }, Dispatcher);
+    }
+
+    private static bool Pressed(int key) => (NativeMethods.GetAsyncKeyState(key) & 0x8000) != 0;
+
+    /// <summary>Left, right, middle and both side buttons: pressing any of them is the user aiming elsewhere.</summary>
+    internal Func<bool> PointerButtonDown { get; set; } =
+        () => Pressed(0x01) || Pressed(0x02) || Pressed(0x04) || Pressed(0x05) || Pressed(0x06);
+
+    /// <summary>
+    /// The window under the cursor rather than the popup's rectangle: a menu is drawn in a layered window
+    /// with room for its shadow around it, and a press out in that margin is a press outside the menu.
+    /// </summary>
+    internal Func<nint> WindowUnderPointer { get; set; } =
+        () => NativeMethods.GetCursorPos(out var cursor) ? NativeMethods.WindowFromPoint(cursor) : 0;
+
+    private static nint MenuHandle(ContextMenu menu) => (PresentationSource.FromVisual(menu) as HwndSource)?.Handle ?? 0;
+
+    /// <summary>Stops watching a tray menu that is gone and hands the foreground back where it came from.</summary>
+    private void EndTrayMenu()
+    {
+        _trayMenuWatch?.Stop();
+        _trayMenuWatch = null;
+        var owner = _trayMenuOwner;
+        var back = _trayMenuReturnTo;
+        _trayMenuOwner = 0;
+        _trayMenuReturnTo = 0;
+        // KB135788: the window that put the menu up has to be poked once afterwards, or the first click
+        // after it closes is swallowed by the menu's own dismissal instead of reaching what the user hit.
+        if (owner != 0) NativeMethods.PostMessage(owner, 0x0000, 0, 0); // WM_NULL
+        if (owner == 0) return;
+        // Nothing of ours is on screen to hold the foreground we took, so leaving it on the hidden tray
+        // window would leave the desktop with no active window at all: hand it to the flyout if that is
+        // up, and otherwise back to whoever had it. A menu item that opened a window of its own has moved
+        // the foreground already, and this then finds it there and leaves it alone.
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (ForegroundWindow() != owner) return;
+            var target = IsFlyoutOpen ? new WindowInteropHelper(this).Handle : back;
+            if (target != 0) ActivateOperation(target);
+        }, DispatcherPriority.Background);
     }
 
     internal ContextMenu CreateTrayMenu()
@@ -209,7 +300,14 @@ public partial class MainWindow : Window
 
     private nint WindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
-        if (message == 0x02E0) Dispatcher.BeginInvoke(() => PositionWindow(false), DispatcherPriority.Loaded);
+        // WM_DPICHANGED and WM_DISPLAYCHANGE: the only two ways the cached scale and refresh rate go stale.
+        if (message is 0x02E0 or 0x007E)
+        {
+            _displayMonitor = 0;
+            CloseTrayMenu(); // Its popup is placed in the old pixels and would be left behind on the screen.
+
+            Dispatcher.BeginInvoke(() => PositionWindow(false), DispatcherPriority.Loaded);
+        }
         if (message == 0x0112 && ListState == ListWindowState.Dragging && (wParam.ToInt64() & 0xFFF0) == 0xF020) handled = true;
         if (ListState == ListWindowState.Dragging && (message == 0x0010 || (message == 0x0112 && (wParam.ToInt64() & 0xFFF0) == 0xF060)))
         { _exitAfterDrag = true; handled = true; }
@@ -307,15 +405,24 @@ public partial class MainWindow : Window
             if (!NativeMethods.GetMonitorInfoW(monitor, ref info)) return;
         }
         _lastMonitor = monitor;
-        AnimationFrameRate = DisplayAnimationRate.ForMonitor(monitor);
-        NativeMethods.GetDpiForMonitor(monitor, 0, out var dpi, out _);
-        var scale = dpi > 0 ? dpi / 96d : 1;
+        if (_displayMonitor != monitor)
+        {
+            AnimationFrameRate = DisplayAnimationRate.ForMonitor(monitor);
+            NativeMethods.GetDpiForMonitor(monitor, 0, out var dpi, out _);
+            _displayScale = dpi > 0 ? dpi / 96d : 1;
+            _displayMonitor = monitor;
+        }
+        var scale = _displayScale;
         Width = Math.Max(100, Math.Min(392, (info.Work.Right - info.Work.Left) / scale - 24));
         const double rowHeight = 50; // 46 DIP row + 2 DIP margin on each side.
         const double frameHeight = 20; // Transparent panel padding, no border.
-        var availableHeight = Math.Max(frameHeight, Math.Min(560, (info.Work.Bottom - info.Work.Top) / scale - 24));
+        // The user's count sets the ceiling; the monitor sets the hard limit. A short screen shows fewer
+        // than was asked for rather than running the list off the top of the work area.
+        var screenHeight = Math.Max(frameHeight, (info.Work.Bottom - info.Work.Top) / scale - 24);
+        var availableHeight = Math.Min(frameHeight + _model.MaxVisibleItems * rowHeight, screenHeight);
         var capacity = Math.Max(0, (int)Math.Floor((availableHeight - frameHeight) / rowHeight));
-        // The model keeps newest first. Select only the newest that fit, then show newest at bottom.
+        // The model keeps the chosen order, leading file first. Take only what fits, then put that file at
+        // the bottom, nearest the tray.
         var visibleItems = _model.Items.Take(capacity).Reverse().ToArray();
         // Re-seating the source regenerates every row: hover state, tooltips and label measurement all
         // start over. A watched folder republishes far more often than the visible list really changes,
@@ -334,7 +441,8 @@ public partial class MainWindow : Window
         // so a row still on the placeholder asks again rather than keeping the generic icon.
         foreach (var item in visibleItems)
             if (rebuild || item.Icon is null || ReferenceEquals(item.Icon, _model.FallbackIcon)) _ = _model.LoadIconAsync(item);
-        Height = visibleItems.Length == 0 ? Math.Min(96, availableHeight) : frameHeight + visibleItems.Length * rowHeight;
+        // The empty line needs its own room: a user who asked for one row still has to be able to read it.
+        Height = visibleItems.Length == 0 ? Math.Min(96, screenHeight) : frameHeight + visibleItems.Length * rowHeight;
         var width = (int)Math.Round(Width * scale);
         var height = (int)Math.Round(Height * scale);
         var gap = (int)Math.Round(12 * scale);

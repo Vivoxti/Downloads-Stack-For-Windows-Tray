@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore DownloadsStack.slnx
+
+      - name: Build
+        run: dotnet build DownloadsStack.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test DownloadsStack.slnx -c Release --no-build

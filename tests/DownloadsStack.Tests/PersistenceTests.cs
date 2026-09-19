@@ -15,6 +15,123 @@ public class PersistenceTests
         var next = await new SettingsStore(folder.Path).LoadAsync(); Assert.Empty(next.Data.Sources);
     }
     [Fact]
+    public async Task RenderPreferenceRoundTripsAndAnOlderFileMeansTheSparingRenderer()
+    {
+        using var folder = new TestDirectory();
+        // Written before the option existed. Reading it must not switch the graphics card back on, and it
+        // must not count as damaged either.
+        folder.File("settings.json", "{\"schemaVersion\":1,\"sources\":[{\"id\":\"a\",\"kind\":\"downloads\",\"path\":null}]}");
+        var loaded = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Null(loaded.Message);
+        Assert.False(loaded.Data.HardwareRendering);
+        Assert.Empty(Directory.GetFiles(folder.Path, "settings.json.corrupt-*"));
+        await new SettingsStore(folder.Path).SaveAsync(loaded.Data with { HardwareRendering = true });
+        var again = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.True(again.Data.HardwareRendering);
+        Assert.Single(again.Data.Sources);
+    }
+    [Fact]
+    public async Task BackdropOpacityRoundTripsAndAnOlderFileKeepsThePlateItAlwaysHad()
+    {
+        using var folder = new TestDirectory();
+        folder.File("settings.json", "{\"schemaVersion\":1,\"sources\":[{\"id\":\"a\",\"kind\":\"downloads\",\"path\":null}]}");
+        var loaded = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Null(loaded.Message);
+        Assert.Equal(SettingsData.DefaultBackdropOpacity, loaded.Data.BackdropOpacity);
+        await new SettingsStore(folder.Path).SaveAsync(loaded.Data with { BackdropOpacity = 0 });
+        var again = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Equal(0, again.Data.BackdropOpacity); // Zero is a real answer, not a missing field.
+        Assert.Single(again.Data.Sources);
+    }
+    [Fact]
+    public async Task AnOpacityOutsideTheRangeIsBroughtBackInsteadOfCondemningTheFile()
+    {
+        using var folder = new TestDirectory();
+        folder.File("settings.json", "{\"schemaVersion\":1,\"backdropOpacity\":140,\"sources\":[{\"id\":\"a\",\"kind\":\"downloads\",\"path\":null}]}");
+        var loaded = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Null(loaded.Message);
+        Assert.Equal(100, loaded.Data.BackdropOpacity);
+        Assert.Single(loaded.Data.Sources); // The folder list survives a hand-edited number.
+        Assert.Empty(Directory.GetFiles(folder.Path, "settings.json.corrupt-*"));
+    }
+    [Fact]
+    public async Task TheVisibleCountRoundTripsAndAnOlderFileKeepsTheTenRowsThePanelAlwaysFitted()
+    {
+        using var folder = new TestDirectory();
+        folder.File("settings.json", "{\"schemaVersion\":1,\"sources\":[{\"id\":\"a\",\"kind\":\"downloads\",\"path\":null}]}");
+        var loaded = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Null(loaded.Message);
+        Assert.Equal(SettingsData.DefaultMaxVisibleItems, loaded.Data.MaxVisibleItems);
+        await new SettingsStore(folder.Path).SaveAsync(loaded.Data with { MaxVisibleItems = SettingsData.MaxVisibleItemsLimit });
+        var again = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Equal(20, again.Data.MaxVisibleItems);
+        Assert.Single(again.Data.Sources);
+    }
+    [Fact]
+    public async Task AVisibleCountOutsideTheRangeIsBroughtBackInsteadOfCondemningTheFile()
+    {
+        using var folder = new TestDirectory();
+        // Zero would leave a panel with nothing in it and no way back to the settings from the list itself.
+        folder.File("settings.json", "{\"schemaVersion\":1,\"maxVisibleItems\":0,\"sources\":[{\"id\":\"a\",\"kind\":\"downloads\",\"path\":null}]}");
+        var loaded = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Null(loaded.Message);
+        Assert.Equal(SettingsData.MinVisibleItems, loaded.Data.MaxVisibleItems);
+        Assert.Single(loaded.Data.Sources); // The folder list survives a hand-edited number.
+        Assert.Empty(Directory.GetFiles(folder.Path, "settings.json.corrupt-*"));
+    }
+    [Fact]
+    public async Task TheSortChoiceRoundTripsAndAnOlderFileKeepsTheOrderTheListAlwaysHad()
+    {
+        using var folder = new TestDirectory();
+        folder.File("settings.json", "{\"schemaVersion\":1,\"sources\":[{\"id\":\"a\",\"kind\":\"downloads\",\"path\":null}]}");
+        var loaded = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Null(loaded.Message);
+        Assert.Equal(SortField.DateAdded, loaded.Data.SortBy);
+        Assert.False(loaded.Data.SortReversed);
+        await new SettingsStore(folder.Path).SaveAsync(loaded.Data with { SortBy = SortField.DateAccessed, SortReversed = true });
+        // Written by name: the file stays legible, and a number would mean nothing to anyone reading it.
+        Assert.Contains("\"sortBy\": \"DateAccessed\"", File.ReadAllText(Path.Combine(folder.Path, "settings.json")));
+        var again = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Equal(SortField.DateAccessed, again.Data.SortBy);
+        Assert.True(again.Data.SortReversed);
+        Assert.Single(again.Data.Sources);
+    }
+    [Fact]
+    public async Task AnUnknownSortFieldFallsBackInsteadOfCondemningTheFile()
+    {
+        using var folder = new TestDirectory();
+        folder.File("settings.json", "{\"schemaVersion\":1,\"sortBy\":\"ByColour\",\"sources\":[{\"id\":\"a\",\"kind\":\"downloads\",\"path\":null}]}");
+        var loaded = await new SettingsStore(folder.Path).LoadAsync();
+        Assert.Null(loaded.Message);
+        Assert.Equal(SortField.DateAdded, loaded.Data.SortBy);
+        Assert.Single(loaded.Data.Sources); // A word from a newer version is not worth the user's folder list.
+        Assert.Empty(Directory.GetFiles(folder.Path, "settings.json.corrupt-*"));
+    }
+    [Fact]
+    public void TheOpacityPercentageIsTheAlphaOfThePlate()
+    {
+        Assert.Equal(0, Alpha(0));
+        Assert.Equal(255, Alpha(100));
+        Assert.Equal(217, Alpha(SettingsData.DefaultBackdropOpacity)); // What the plate was before the setting.
+        Assert.Equal(255, Alpha(400)); // A caller cannot paint past opaque.
+        static byte Alpha(int percent) => ((System.Windows.Media.SolidColorBrush)MainViewModel.BackdropBrushFor(percent)).Color.A;
+    }
+    [Fact]
+    public void TheRenderPreferenceIsWhatDecidesWhetherDirect3DIsUsed()
+    {
+        var original = System.Windows.Media.RenderOptions.ProcessRenderMode;
+        try
+        {
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.Default;
+            MainViewModel.ApplyRenderMode(true);
+            // Asking for the graphics card must leave WPF alone rather than pin it to anything.
+            Assert.Equal(System.Windows.Interop.RenderMode.Default, System.Windows.Media.RenderOptions.ProcessRenderMode);
+            MainViewModel.ApplyRenderMode(false);
+            Assert.Equal(System.Windows.Interop.RenderMode.SoftwareOnly, System.Windows.Media.RenderOptions.ProcessRenderMode);
+        }
+        finally { System.Windows.Media.RenderOptions.ProcessRenderMode = original; }
+    }
+    [Fact]
     public async Task DamagedSettingsAreBackedUpBeforeRestoringDefaults()
     {
         using var folder = new TestDirectory(); folder.File("settings.json", "{ damaged");
