@@ -52,47 +52,15 @@ Before you start a new build, close the previous instance through Exit. Otherwis
 
 ## The list and its settings
 
-No title, no buttons, no scrolling: the panel shows the newest files that fit completely, the first of them at the bottom, closest to the tray icon. A left click or Enter opens a file, a right click opens the Windows context menu, and dragging hands the file over to whatever accepts it.
+No title, no buttons, no scrolling: the newest files that fit, the newest at the bottom. A left click or Enter opens one, a right click gives the real Windows Shell menu, and dragging hands the file to whatever accepts it. Each name carries its own dark backdrop so it stays readable over any wallpaper, and PNG, JPG and MP4 show the system thumbnail instead of a generic icon.
 
 <p align="center">
   <img src="docs/settings.png" alt="The settings window: the list of source folders, the sort order, the startup checkbox, and the sliders for how many files to show and how opaque the backdrop behind each name is" width="540">
 </p>
 
-A right click on the tray icon opens the settings: the source folders, the sort order, how many files to show, the opacity of the backdrop behind the names, startup, and hardware graphics acceleration. Everything but the acceleration applies at once; that one needs a restart, and leaving it off is what keeps the application at about 16 MB in the tray instead of 62.
+A right click on the tray icon opens the settings — folders, sort order, how many files, backdrop opacity, startup, hardware acceleration — and everything but the last applies at once. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
 
-Downloads is connected by default, and subfolders are never walked. Removing a source removes its rows, never its files. Sorting is by date added, name, type, or the file's modified, created and accessed dates, in either direction. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
-
-This is a list of what is in the folders you chose, not a download log across all browsers, and unfinished downloads are filtered out heuristically.
-
-### Readable names on any wallpaper
-
-Each name gets its own dark backdrop, fitted to the visible text, with blurred edges. The panel's own background stays transparent.
-
-The opacity of that backdrop is set by a slider in the settings, from 0 to 100% (85% by default). The panel repaints immediately, no restart needed; the value is stored in `settings.json` as `backdropOpacity`.
-
-The whole area of the panel, including the gaps between rows and the margin around them, takes the mouse: in a layered window a pixel without alpha lets the cursor through to the window behind, so the surface is filled with an all but invisible `#01000000` background.
-
-Once a drag finishes or is cancelled, the panel hides; the next click on the tray icon opens it again. The mouse capture is released before the native drag and after it. The full path appears only after 2 seconds of hovering over one row; moving to another row means another 2 seconds. Tooltips are off during a drag and on a hidden panel.
-
-### Thumbnails
-
-For PNG, JPG/JPEG and MP4 the system thumbnail — the image itself, or a frame of the video — is shown instead of the generic icon. Loading happens in the background and only for visible files; if Windows cannot produce a thumbnail, the ordinary icon is shown. Row sizes and the hover animation are unchanged.
-
-### The Shell context menu
-
-A right click on a file opens the real classic Windows Shell context menu, with the system commands and the installed extensions. On Windows 11 this is the "Show more options" menu, not File Explorer's new compact one. The outline and the enlarged icon stay while the menu is open. Escape dismisses the menu; once a command runs, the list hides.
-
-The native file menu follows the Windows app theme: dark in the dark theme, light in the light one. The setting is checked before every open, so no restart is needed after the theme changes. Under high contrast the system styling is kept.
-
-A right click on the tray icon opens a compact menu with "Folder settings" and "Exit". It has no separators, and uses a #202020 background, a thin border and padding in the style of the Windows dark system menu.
-
-### Animations and the tray icon
-
-On hover the icon grows to 135% with a soft spring and lifts by 2 DIP, then returns over 120 ms. Background highlighting of the row on hover and selection is gone; the local backdrop behind the name stays. The path appears after 1 second on each file. The panel appears with a slight lift and scale over 170 ms and disappears over 95 ms. Reopening quickly cancels a close that has not finished. During a drag all movement of the panel is stopped.
-
-Animations ask the current monitor for its refresh rate. Content is cached while opening and closing; the text backdrops are cached as well, so the blur is not recomputed every frame. The actual frame rate is up to WPF/DWM and the load, especially for a transparent window.
-
-The tray icon shows the state: white when the list is closed, green #25BC96 when it is open. On close — including Escape, a click outside and the end of a drag — the colour goes back to white. The icon's tooltip switches between "Open the list" and "Close the list". The application icon remains separate.
+The tray icon is white while the list is closed and green while it is open.
 
 <p align="center">
   <img src="docs/tray.png" alt="The same corner of the tray twice: the icon green while the list is open, and white while it is closed" width="314">
