@@ -21,10 +21,6 @@ you see are the system file icons and the file names. One click opens a file, dr
 Shell data object, a right click brings up the classic File Explorer context menu. There can be several
 source folders; Downloads is connected by default.
 
-<p align="center">
-  <img src="docs/flyout.png" alt="The open panel: file icons and names over the desktop, with no window frame, above the Windows taskbar" width="380">
-</p>
-
 ## Install
 
 Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest). Both packages carry the same application — the only choice is how it gets onto the machine.
@@ -56,23 +52,17 @@ Before you start a new build, close the previous instance through Exit. Otherwis
 
 ## The list and its settings
 
-A fully transparent panel: no blur, no dimming, no border, no window shadow. All that is visible are the system file icons and the names with their extensions. A row is highlighted on hover and on selection. The text carries a slight shadow so it stays readable against the desktop. The full path is available in the row's tooltip. The settings window keeps its own Acrylic styling.
-
-The settings have a "Hardware graphics acceleration" checkbox, off by default. Without it the application takes about 16 MB in the tray and 30 MB with the list open, instead of 62 and 106 MB: nearly all of that difference is the Direct3D device that WPF creates along with the first window and never gives back. The price is CPU time during the open and close animations, and only there. The switch takes effect after a restart.
-
-The system Downloads folder is connected by default. The folder settings are one right click on the tray icon away. Removing a source does not delete any files. The newest files are picked from all the selected folders, without walking into subfolders. The panel shows only the rows that fit completely, and does not scroll. The first file of the chosen order sits at the bottom, closest to the tray icon. There is no title, no buttons and no bottom bar.
-
-The "Files in the list" slider sets how many of the newest files the panel shows: from 1 to 20, 10 by default — exactly as many as used to fit. The panel rebuilds itself immediately, right under the slider. The monitor gets the last word: if the rows do not fit into the work area, there will be fewer of them than you asked for. The value is stored in `settings.json` as `maxVisibleItems`.
-
-The settings also have a "Sort" dropdown and a "Reverse order" checkbox. You can sort by date added, name, type (extension), date modified, date created and date accessed. "Date added" is the application's original order — when the file showed up in the folder; the other dates are read from the file itself, which is why "date created" can differ from it for a file that was moved. Dates run newest first, name and type run alphabetically, and the checkbox flips the whole list. The choice takes effect at once, without a restart and without re-reading the folders, and is stored in `settings.json` as `sortBy` and `sortReversed`. Ordering by date accessed catches up on the next folder scan: Windows sends no notification when a file is read, and the application does not watch for it.
-
-A single left click, or Enter, opens the file. A right click outlines the row and opens the context menu; the icon stays enlarged while the menu is open. Dragging hands over a real Shell data object; whether that copies or moves is up to the receiving application. The panel does not hide on focus loss during a drag. The file's context menu can open the file or show it in File Explorer.
-
-This is a list of the files in the folders you chose, not a download log across all browsers. Unfinished downloads are filtered out heuristically. For older files the creation date approximates the order; for new ones the discovery date is kept. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
+No title, no buttons, no scrolling: the panel shows the newest files that fit completely, the first of them at the bottom, closest to the tray icon. A left click or Enter opens a file, a right click opens the Windows context menu, and dragging hands the file over to whatever accepts it.
 
 <p align="center">
   <img src="docs/settings.png" alt="The settings window: the list of source folders, the sort order, the startup checkbox, and the sliders for how many files to show and how opaque the backdrop behind each name is" width="540">
 </p>
+
+A right click on the tray icon opens the settings: the source folders, the sort order, how many files to show, the opacity of the backdrop behind the names, startup, and hardware graphics acceleration. Everything but the acceleration applies at once; that one needs a restart, and leaving it off is what keeps the application at about 16 MB in the tray instead of 62.
+
+Downloads is connected by default, and subfolders are never walked. Removing a source removes its rows, never its files. Sorting is by date added, name, type, or the file's modified, created and accessed dates, in either direction. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
+
+This is a list of what is in the folders you chose, not a download log across all browsers, and unfinished downloads are filtered out heuristically.
 
 ### Readable names on any wallpaper
 
@@ -110,39 +100,7 @@ The tray icon shows the state: white when the list is closed, green #25BC96 when
 
 ## Starting with Windows
 
-The settings have a "Startup" group with a "Start with Windows" checkbox. It writes a `DownloadsStack` value into `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`: the full path to the current exe in quotes plus the `--autostart` switch. No administrator rights are required, no service and no scheduled task are created, and the entry shows up in Task Manager's Startup apps alongside every other program. It works identically in the portable and in the installed package.
-
-The registry itself is the source of truth, not `settings.json`. The same switch exists in Task Manager, and a copy of the value in the settings file would start lying the second the user touched it. That is why the settings window re-reads the registry every time it opens.
-
-Windows can disable the entry without deleting it: the command stays where it is, and the user's answer is kept separately, under `Explorer\StartupApproved\Run`. In that case the checkbox honestly stays on — the entry is there, after all — and a line appears underneath it explaining that Windows disabled startup in Task Manager and that it can only be turned back on there. The application does not overwrite that decision.
-
-A portable copy that was moved to another folder repairs itself: on startup it compares the path in the entry and, if that file is gone, rewrites the entry to point at itself. If the file at the old path is still there, the entry is left alone — one run of a second copy should not take startup away from the one the user registered.
-
-From a script the windowless commands do the same: `"Downloads Stack.exe" --autostart-on` and `--autostart-off`. The `--quit` command stops the running instance and only returns once the process has actually closed — that is how the installer frees the exe before replacing it.
-
-## Releases: portable build and installer
-
-`scripts/package.ps1` builds both packages (running the tests first; `-SkipTests` skips them):
-
-- `artifacts/DownloadsStack-<version>-portable-win-x64.zip` — one executable inside, about 61 MB to download. Unpack it anywhere and run the exe; nothing appears in the system until startup is turned on for the first time. The bundle costs nothing to load compared with the ordinary folder, and the shortcut the application writes next to itself takes its icon from the executable, so nothing has to travel alongside it. The numbers are in `CHECKS.md`.
-- `artifacts/DownloadsStack-<version>-win-x64.msi` — a per-machine wizard built on WiX's `WixUI_InstallDir` dialog set: welcome, licence, install folder, install. It puts a Start menu shortcut with the same `AppUserModel.ID` the application uses, and launches it at the end. Upgrading over an installed version first asks the running instance to close (`--quit`), which is why it needs no reboot.
-
-The folder the wizard browses to is the parent of the application's own. Windows Installer's browse dialog replaces the whole path with whatever is picked, so browsing to `D:\Tools` with the application folder as the target would put four hundred files straight into `D:\Tools`; with the parent as the target it becomes `D:\Tools\Downloads Stack`, which is what picking a folder is taken to mean.
-
-Version 1.1.0 offered a choice between installing for one user and for everybody, through `WixUI_Advanced`. The choice did not work: the first thing that dialog set's Next button does is `WixAppFolder = "WixPerUserFolder"` when `NOT Privileged`, so a package started by a double click — never elevated — puts the answer back to "only for me" before reading it. Choosing "for all users" produced an AppData path. Making the package per-machine hands elevation to Windows, which does it properly; anyone who wants no administrator rights has the portable build.
-
-Program Files is read-only to an ordinary user, so the shortcut the application writes next to its own executable cannot be written into an installed copy. That is not an error and is not reported as one: the installation carries a Start menu shortcut with the same identity, which is what the one beside the executable exists to provide in a portable copy, where nobody else provides it.
-
-Startup stays a per-user switch. Installing for all users puts the program on the machine; it does not start it for everybody. Each user turns the checkbox on for themselves.
-
-Startup is turned on the same way in both packages — the checkbox in the settings. The installer does not touch the `Run` key at all, and that is a measured decision rather than an oversight: a registry change made inside a Windows Installer transaction did not survive that transaction — neither one written by the package itself, nor one written by the program the package launched from a custom action. The details and the numbers are in `CHECKS.md`.
-
-The reverse follows from it: uninstalling does not remove the startup entry if the user had turned it on. Clear the checkbox before uninstalling, or remove the line in Task Manager's Startup apps; an entry pointing at a deleted file is simply ignored by Windows.
-
-```powershell
-msiexec /i "artifacts\DownloadsStack-1.2.0-win-x64.msi" /qn
-msiexec /x "artifacts\DownloadsStack-1.2.0-win-x64.msi" /qn
-```
+A "Start with Windows" checkbox in the settings, which writes the executable's path into `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — no administrator rights, no service, no scheduled task, and the same switch turns up in Task Manager's Startup apps, where turning it off wins.
 
 ## Building
 
@@ -154,6 +112,8 @@ dotnet publish src/DownloadsStack/DownloadsStack.csproj -c Release -r win-x64 --
 ```
 
 Publish runs crossgen (`PublishReadyToRun`), so it takes noticeably longer than an ordinary build; at application startup that saves most of the JIT work. WinForms is not used: the tray icon is registered through `Shell_NotifyIcon` directly.
+
+`scripts/package.ps1` builds the two release packages — the single-executable archive and the installer — running the tests first, which `-SkipTests` skips.
 
 The installer is built by WiX 6, wired up as a local tool of the repository: `dotnet tool restore` is its entire toolchain, and `package.ps1` does that itself. The package markup is `packaging/DownloadsStack.wxs`. The version number lives in one place, in `<Version>` in `src/DownloadsStack/DownloadsStack.csproj`: both the archive name and the installer's upgrade logic read it from there.
 
