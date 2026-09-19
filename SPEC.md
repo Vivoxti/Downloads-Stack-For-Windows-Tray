@@ -286,3 +286,28 @@ publishes, because a single-file bundle and the folder the installer carries are
 The installer does not touch the `Run` key — neither on install nor on uninstall — and that is the result of measurement, not of saved effort. A registry change made inside a Windows Installer transaction does not survive that transaction: neither the package's own `RegistryValue`, nor a write by a program launched from a custom action which immediately re-reads it and sees it written. The numbers and the course of the check are in `CHECKS.md`. So the entry has one owner, the application, and the consequence is written down honestly in the README: uninstalling does not remove startup if it had been turned on.
 
 The package takes responsibility for what it can do reliably: the files, a Start menu shortcut with the same `AppUserModel.ID`, removal of the shortcut the application writes next to itself, and stopping a running instance through `--quit` before the files are replaced — otherwise an upgrade would end in a request to reboot. The action that launches the exe comes after `InstallFinalize`: everything scheduled inside the installation script runs at the moment the script is composed, when the files are not on disk yet (error 1721).
+
+### Installing for one user or for all — 19.09.2026
+
+At the user's request of 19.09.2026 the installer offers what most Windows programs offer: an install for
+everybody under Program Files, a folder that can be chosen, and a wizard rather than a silent install. The
+package therefore declares `Scope="perUserOrMachine"` and uses WiX's `WixUI_Advanced` dialog set.
+
+Per-user stays the default, and with it the property defaults Windows Installer reads as per-user
+(`ALLUSERS=2`, `MSIINSTALLPERUSER=1`) and the folder the previous versions used. The dialog set would have
+put a per-user install under `[LocalAppDataFolder]Apps`; a `SetProperty` scheduled after
+`WixSetPerUserFolder` puts it back under `Programs`, where Windows installs per-user applications and where
+the installed copies already are, so an upgrade stays in place instead of moving.
+
+Only the per-machine branch offers a folder to browse to. That is the dialog set's rule, not a decision
+made here: for a per-user install it fixes the path and hides the browse button.
+
+Two things follow from Program Files being read-only to a standard user. The key paths of the components
+move from `HKCU` to `HKMU`, which resolves to `HKLM` for a per-machine install and to `HKCU` for a per-user
+one. And `ShortcutService`, which writes a shortcut beside the executable on every start, treats a refusal
+to write as nothing to do rather than as an error: a per-machine installation carries a Start menu shortcut
+with the same `AppUserModel.ID`, which is the whole purpose of the one beside the executable, and only a
+portable copy has nobody else to provide it.
+
+The startup entry stays per-user in both, because it is a per-user decision: installing for all users puts
+the program on the machine, it does not start it for everybody.

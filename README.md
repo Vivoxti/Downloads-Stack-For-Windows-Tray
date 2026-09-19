@@ -17,7 +17,7 @@ Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloa
 
 | Package | File | What it does |
 | --- | --- | --- |
-| Installer | `DownloadsStack-<version>-win-x64.msi` | Installs into `%LOCALAPPDATA%\Programs\Downloads Stack` for the current user: no administrator rights, no UAC prompt. Adds a Start menu shortcut and launches the application when it finishes. Removed through Installed apps. |
+| Installer | `DownloadsStack-<version>-win-x64.msi` | A wizard that asks who it is for. **Only for me** (the default) installs into `%LOCALAPPDATA%\Programs\Downloads Stack` with no administrator rights and no UAC prompt. **For all users** installs into `Program Files`, asks for administrator rights, and lets the folder be browsed. Either way it adds a Start menu shortcut and launches the application when it finishes, and is removed through Installed apps. |
 | Portable | `DownloadsStack-<version>-portable-win-x64.zip` | One executable inside. Unpack it anywhere and run `Downloads Stack.exe`. Nothing appears anywhere in the system until you turn on startup yourself. |
 
 The application is not signed with a certificate, so SmartScreen will warn you on the first run: More info → Run anyway.
@@ -101,15 +101,19 @@ From a script the windowless commands do the same: `"Downloads Stack.exe" --auto
 `scripts/package.ps1` builds both packages (running the tests first; `-SkipTests` skips them):
 
 - `artifacts/DownloadsStack-<version>-portable-win-x64.zip` — one executable inside, about 61 MB to download. Unpack it anywhere and run the exe; nothing appears in the system until startup is turned on for the first time. The bundle costs nothing to load compared with the ordinary folder, and the shortcut the application writes next to itself takes its icon from the executable, so nothing has to travel alongside it. The numbers are in `CHECKS.md`.
-- `artifacts/DownloadsStack-<version>-win-x64.msi` — a per-user install into `%LOCALAPPDATA%\Programs\Downloads Stack`, without administrator rights and without a UAC prompt. It puts a Start menu shortcut with the same `AppUserModel.ID` the application uses, and launches it at the end. Upgrading over an installed version first asks the running instance to close (`--quit`), which is why it needs no reboot.
+- `artifacts/DownloadsStack-<version>-win-x64.msi` — a wizard built on WiX's `WixUI_Advanced` dialog set, which offers the two installations Windows itself distinguishes. **Only for me** is the default: `%LOCALAPPDATA%\Programs\Downloads Stack`, no administrator rights, no UAC prompt. **For all users** installs into `Program Files` and asks for administrator rights; only that branch offers a folder to browse to, which is the dialog set's own rule. Either way it puts a Start menu shortcut with the same `AppUserModel.ID` the application uses, and launches it at the end. Upgrading over an installed version first asks the running instance to close (`--quit`), which is why it needs no reboot.
+
+An installation for all users lands somewhere a standard user cannot write, so the shortcut the application writes next to its own executable cannot be written there. That is not an error and is not reported as one: the installation carries a Start menu shortcut with the same identity, which is what the one beside the executable exists to provide in a portable copy, where nobody else provides it.
+
+Startup stays a per-user switch in both installations. Installing for all users puts the program on the machine; it does not start it for everybody. Each user turns the checkbox on for themselves.
 
 Startup is turned on the same way in both packages — the checkbox in the settings. The installer does not touch the `Run` key at all, and that is a measured decision rather than an oversight: a registry change made inside a Windows Installer transaction did not survive that transaction — neither one written by the package itself, nor one written by the program the package launched from a custom action. The details and the numbers are in `CHECKS.md`.
 
 The reverse follows from it: uninstalling does not remove the startup entry if the user had turned it on. Clear the checkbox before uninstalling, or remove the line in Task Manager's Startup apps; an entry pointing at a deleted file is simply ignored by Windows.
 
 ```powershell
-msiexec /i "artifacts\DownloadsStack-1.0.2-win-x64.msi" /qn
-msiexec /x "artifacts\DownloadsStack-1.0.2-win-x64.msi" /qn
+msiexec /i "artifacts\DownloadsStack-1.1.0-win-x64.msi" /qn
+msiexec /x "artifacts\DownloadsStack-1.1.0-win-x64.msi" /qn
 ```
 
 ## Building

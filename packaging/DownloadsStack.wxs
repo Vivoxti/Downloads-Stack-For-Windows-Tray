@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  A per-user installer. No administrator rights are asked for and nothing is written outside the user's
-  own profile: the application is a tray utility that starts at that user's sign-in, and the executable
-  writes a shortcut next to itself, which a folder under Program Files would forbid.
+  An installer the user chooses the shape of: "for all users" puts the application under Program Files and
+  asks for administrator rights, "only for me" puts it in the user's own profile and asks for nothing. The
+  wizard offers both, and only the per-machine branch lets the folder be browsed — that is the dialog set's
+  own rule, not a decision made here.
+
+  Per-user stays the default. The application is a tray utility that starts at one user's sign-in, and its
+  settings, its index and its startup entry are that user's; installing it for everybody is the unusual case,
+  not the ordinary one.
 
   The package leaves the sign-in entry alone, on the way in and on the way out. The application owns it:
   one switch in its settings, the same switch for a portable copy and an installed one. That is not for
@@ -10,8 +15,8 @@
   it here, whether the package made it or a program the package ran. CHECKS.md has the measurements.
   Uninstalling therefore leaves a startup entry the user switched on; the README says so.
 -->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package Name="Downloads Stack" Manufacturer="Vivoderin" Version="$(Version)" Scope="perUser" Compressed="yes"
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="Downloads Stack" Manufacturer="Vivoderin" Version="$(Version)" Scope="perUserOrMachine" Compressed="yes"
            UpgradeCode="F3F82516-6B43-446F-B820-69C1F16551B1" Language="1033" Codepage="1252">
     <SummaryInformation Description="Downloads Stack — recent files from the folders you choose" />
     <MajorUpgrade AllowSameVersionUpgrades="yes"
@@ -25,12 +30,43 @@
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray" />
 
-    <StandardDirectory Id="LocalAppDataFolder">
-      <Directory Id="ProgramsFolder" Name="Programs">
-        <Directory Id="INSTALLFOLDER" Name="Downloads Stack" />
-      </Directory>
+    <!-- WixUI_Advanced insists on these three: the folder it installs into must be APPLICATIONFOLDER, the
+         name it builds a default path from must be ApplicationFolderName, and WixAppFolder is which of the
+         two radio buttons starts selected. -->
+    <Property Id="ApplicationFolderName" Value="Downloads Stack" />
+    <Property Id="WixAppFolder" Value="WixPerUserFolder" />
+    <!-- No InstallDirectory attribute: it would author WIXUI_INSTALLDIR, which this dialog set already
+         defines for itself, and the two collide at link time. Advanced finds the folder by its name. -->
+    <ui:WixUI Id="WixUI_Advanced" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(LicenseRtf)" />
+
+    <!-- The authored parent is the per-machine one. For "only for me" the dialog set overwrites
+         APPLICATIONFOLDER, and SetPerUserApplicationFolder below puts it back under Programs, which is
+         where Windows itself installs per-user applications. -->
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="APPLICATIONFOLDER" Name="Downloads Stack" />
     </StandardDirectory>
     <StandardDirectory Id="ProgramMenuFolder" />
+
+    <!-- The two folders the dialog set offers, redefined right after it computes its own defaults. This is
+         the only hook that covers every path: the sequenced actions read these properties, and so do the
+         scope dialog's buttons, which assign APPLICATIONFOLDER=[WixPerMachineFolder] outright and would
+         walk over anything set earlier.
+
+         Both defaults needed changing. The per-machine one is built from ProgramFilesFolder, which in a
+         64-bit package still points at Program Files (x86) — a 64-bit application installed there once,
+         which is how this was found. The per-user one is [LocalAppDataFolder]Apps, while Windows and the
+         versions before this one use Programs, and an upgrade should stay where it is rather than move.
+
+         Earlier attempts conditioned an APPLICATIONFOLDER override on WixAppFolder and then on
+         MSIINSTALLPERUSER, and both were wrong: WixAppFolder is mixed case, so it is private and a command
+         line cannot set it, which left `msiexec ALLUSERS=1 /qn` putting files in the installing user's
+         profile under a per-machine registration. Every one of these was found by installing the package,
+         not by reading it. -->
+    <SetProperty Id="WixPerUserFolder" Value="[LocalAppDataFolder]Programs\Downloads Stack"
+                 After="WixSetDefaultPerMachineFolder" Sequence="both" />
+    <SetProperty Id="WixPerMachineFolder" Value="[ProgramFiles64Folder]Downloads Stack"
+                 After="WixSetDefaultPerMachineFolder" Sequence="both" />
 
     <Feature Id="Main" Title="Downloads Stack" Level="1">
       <ComponentGroupRef Id="ApplicationFiles" />
@@ -38,7 +74,7 @@
       <ComponentRef Id="LeftoverFiles" />
     </Feature>
 
-    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+    <ComponentGroup Id="ApplicationFiles" Directory="APPLICATIONFOLDER">
       <Files Include="$(PublishDir)\**" />
     </ComponentGroup>
 
@@ -47,25 +83,31 @@
            groups the tray application, its window and this entry as one program. -->
       <Shortcut Id="ApplicationShortcut" Name="Downloads Stack" Icon="AppIcon"
                 Description="A single list of recent files from the folders you choose"
-                Target="[INSTALLFOLDER]Downloads Stack.exe" WorkingDirectory="INSTALLFOLDER">
+                Target="[APPLICATIONFOLDER]Downloads Stack.exe" WorkingDirectory="APPLICATIONFOLDER">
         <ShortcutProperty Key="System.AppUserModel.ID" Value="Vivoderin.DownloadsStack" />
       </Shortcut>
-      <RegistryValue Root="HKCU" Key="Software\Vivoderin\Downloads Stack" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      <!-- HKMU, not HKCU: in a package that can install either way, the key path has to land in HKLM for a
+           per-machine install and in HKCU for a per-user one, and that is what HKMU resolves to. -->
+      <RegistryValue Root="HKMU" Key="Software\Vivoderin\Downloads Stack" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
     </Component>
 
-    <Component Id="LeftoverFiles" Directory="INSTALLFOLDER" Guid="9B0A6E52-7F13-4D41-8B64-3E9C0D5A2F77">
-      <!-- The application writes this shortcut next to itself on first run; the installer never sees it. -->
+    <Component Id="LeftoverFiles" Directory="APPLICATIONFOLDER" Guid="9B0A6E52-7F13-4D41-8B64-3E9C0D5A2F77">
+      <!-- The application writes this shortcut next to itself on first run, where it is allowed to; the
+           installer never sees it, so removing it has to be spelled out. -->
       <RemoveFile Id="RemoveOwnShortcut" Name="Downloads Stack.lnk" On="uninstall" />
-      <RegistryValue Root="HKCU" Key="Software\Vivoderin\Downloads Stack" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+      <RegistryValue Root="HKMU" Key="Software\Vivoderin\Downloads Stack" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
       <!-- No RemoveRegistryValue for the startup entry, however tempting it looks: that element compiles
            into the RemoveRegistry table, which Windows Installer processes when a component is INSTALLED,
            not when one is removed. -->
     </Component>
 
-    <CustomAction Id="QuitRunningApplication" Directory="INSTALLFOLDER" Execute="immediate" Return="ignore"
-                  ExeCommand="&quot;[INSTALLFOLDER]Downloads Stack.exe&quot; --quit" />
-    <CustomAction Id="LaunchApplication" Directory="INSTALLFOLDER" Execute="immediate" Return="asyncNoWait"
-                  ExeCommand="&quot;[INSTALLFOLDER]Downloads Stack.exe&quot;" />
+    <CustomAction Id="QuitRunningApplication" Directory="APPLICATIONFOLDER" Execute="immediate" Return="ignore"
+                  ExeCommand="&quot;[APPLICATIONFOLDER]Downloads Stack.exe&quot; --quit" />
+    <!-- Immediate, so it runs in the client process as the user who started the installation. A deferred
+         action in a per-machine install would run elevated, and a tray utility running as administrator is
+         not what anyone asked for. -->
+    <CustomAction Id="LaunchApplication" Directory="APPLICATIONFOLDER" Execute="immediate" Return="asyncNoWait"
+                  ExeCommand="&quot;[APPLICATIONFOLDER]Downloads Stack.exe&quot;" />
 
     <InstallExecuteSequence>
       <!-- A tray application holds its own executable open. Asking it to exit before anything is replaced

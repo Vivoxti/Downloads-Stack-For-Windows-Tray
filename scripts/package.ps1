@@ -51,13 +51,19 @@ Remove-Item -LiteralPath $uiCheckLog -Force # Written by the check above, not pa
 $outputs = @()
 
 if (-not $SkipInstaller) {
-    # WiX is a local tool of this repository: restoring it is the whole of the installer toolchain.
+    # WiX is a local tool of this repository: restoring it is most of the installer toolchain. The wizard
+    # dialogs live in an extension, which the tool keeps in its own cache rather than in the repository,
+    # so adding it here is what makes a fresh clone build the same package. Adding it twice is not an error.
     dotnet tool restore
     if ($LASTEXITCODE -ne 0) { throw 'Restoring the WiX tool failed.' }
+    dotnet wix extension add -g WixToolset.UI.wixext/6.0.2
+    if ($LASTEXITCODE -ne 0) { throw 'Adding the WiX UI extension failed.' }
     $msiPath = Join-Path $artifactsPath "DownloadsStack-$version-win-x64.msi"
+    $licensePath = Join-Path $projectRoot 'packaging/License.rtf'
     Write-Output 'Building the installer (compressing ~140 MB into a cabinet takes a few minutes)...'
     dotnet wix build (Join-Path $projectRoot 'packaging/DownloadsStack.wxs') `
-        -arch x64 -d "Version=$version" -d "PublishDir=$appPath" -o $msiPath
+        -arch x64 -ext WixToolset.UI.wixext -d "Version=$version" -d "PublishDir=$appPath" `
+        -d "LicenseRtf=$licensePath" -o $msiPath
     if ($LASTEXITCODE -ne 0) { throw 'Building the installer failed.' }
     $outputs += $msiPath
 }

@@ -39,12 +39,21 @@ internal static class ShortcutService
                 ((IPersistFile)link).Save(target, true);
                 completion.SetResult();
             }
+            // An installation for all users lives under Program Files, which a standard user cannot write
+            // to. There is nothing to report: that installation carries a Start menu shortcut with the
+            // same identity, which is what the shortcut beside the executable exists to provide when
+            // nobody else does — in a portable copy.
+            catch (Exception ex) when (IsAccessDenied(ex)) { LocalLog.Write("Shortcut (read-only folder)", ex); completion.SetResult(); }
             catch (Exception ex) { completion.SetException(ex); }
             finally { if (link is not null) Marshal.ReleaseComObject(link); }
         }) { IsBackground = true, Name = "Application shortcut (STA)" };
         thread.SetApartmentState(ApartmentState.STA); thread.Start();
         return completion.Task;
     }
+
+    /// <summary>COM reports the refusal as an HRESULT; the file APIs raise it as an exception of their own.</summary>
+    private static bool IsAccessDenied(Exception exception) =>
+        exception is UnauthorizedAccessException || exception.HResult == unchecked((int)0x80070005);
 
     /// <summary>Reads the stored target rather than trusting timestamps, which a folder copy preserves.</summary>
     private static bool AlreadyPointsTo(string target, string executable)

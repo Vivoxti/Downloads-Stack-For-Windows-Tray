@@ -509,3 +509,57 @@ compiled into the package.
 **Not checked:** how the single file behaves against an antivirus other than the one on this machine —
 an unsigned executable that unpacks native libraries into `%TEMP%` on first run is exactly the shape
 heuristics dislike, and nothing here says how a given scanner will treat it.
+
+## An installer for one user or for all — 19.09.2026
+
+The package now declares `Scope="perUserOrMachine"` and carries WiX's `WixUI_Advanced` wizard. Both branches
+were installed and uninstalled on this machine with a stub payload, which builds in seconds and exercises
+exactly the parts under test — the folder each branch resolves, the registry root, where the Start menu
+shortcut lands, and whether anything is left behind.
+
+| | folder | Start menu | marker | uninstall |
+|---|---|---|---|---|
+| Default, not elevated (`/qn`) | `%LOCALAPPDATA%\Programs\Downloads Stack` | the user's | `HKCU` | nothing left |
+| `ALLUSERS=1`, elevated (`/qn`) | `C:\Program Files\Downloads Stack` | all users | `HKLM` | nothing left |
+
+Every install and uninstall returned 0, and the per-machine install left nothing under `%LOCALAPPDATA%`.
+
+Three conditions were wrong before these two passed, and every one of them was found by installing rather
+than by reading the markup:
+
+1. An `APPLICATIONFOLDER` override conditioned on `WixAppFolder = "WixPerUserFolder"`. `WixAppFolder` is
+   mixed case, therefore a private property, therefore not settable from a command line — it says "per
+   user" throughout a silent `ALLUSERS=1` install. The package registered itself per machine and put its
+   files in the installing user's profile.
+2. The same override conditioned on `MSIINSTALLPERUSER AND ALLUSERS = "2"`, which failed the other way:
+   in the server process the condition was false, and a per-user install landed in the dialog set's own
+   `[LocalAppDataFolder]Apps` rather than in `Programs`.
+3. Overriding `APPLICATIONFOLDER` at all. The dialog set's own actions are guarded by
+   `APPLICATIONFOLDER=""`, so they step aside for a value set earlier — but the scope dialog's Next button
+   assigns `APPLICATIONFOLDER=[WixPerMachineFolder]` as a control event, which walks over anything the
+   sequence set. Only redefining `WixPerUserFolder` and `WixPerMachineFolder`, right after the dialog set
+   computes its defaults, covers the sequenced path and the interactive one at once.
+
+Both defaults needed replacing. `WixPerMachineFolder` is built from `ProgramFilesFolder`, which in a 64-bit
+package still resolves to `C:\Program Files (x86)`: the first successful per-machine install put a 64-bit
+application there. `WixPerUserFolder` is `[LocalAppDataFolder]Apps`, while the versions before this one
+installed into `Programs`, where Windows puts per-user applications and where an upgrade should stay.
+
+The component key paths moved from `HKCU` to `HKMU`, which resolves to `HKLM` for a per-machine install and
+`HKCU` for a per-user one. `ShortcutService` now treats a refused write as nothing to do rather than as an
+error: under Program Files a standard user cannot write the shortcut it puts beside the executable, and a
+per-machine installation carries a Start menu shortcut with the same `AppUserModel.ID` anyway.
+
+The real package was then installed for all users and the application started from
+`C:\Program Files\Downloads Stack` at the ordinary user's integrity level, which is the case the read-only
+folder exists in. It ran, it wrote no shortcut beside itself, and it put one line in `app.log`:
+`Shortcut (read-only folder): System.UnauthorizedAccessException: Access is denied. (0x80070005)`. Nothing
+was reported to the user, which is the point of that catch. The first attempt at this check proved nothing:
+it drove msiexec from an already elevated shell, so the installer's own launch action started the
+application elevated and it wrote the shortcut quite happily. Getting back down to the user's own level
+took handing the path to `explorer.exe`.
+
+**Not checked:** the wizard itself. Everything above was driven silently; nobody has clicked through the
+welcome page, the licence, the two radio buttons or the Browse dialog, and no one has seen how the pages
+look. The per-machine branch has also only been installed by the machine's own administrator, not by a
+standard user answering a UAC prompt with someone else's credentials.
