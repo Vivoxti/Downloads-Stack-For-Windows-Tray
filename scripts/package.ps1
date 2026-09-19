@@ -1,6 +1,12 @@
-# The two things a release is made of, from one publish: a portable archive to unpack anywhere, and a
-# per-user installer. Both carry the same self-contained build, and starting with Windows works the same
-# way in both — the application writes its own entry under the user's Run key, from wherever it is.
+# The two things a release is made of: a portable archive to unpack anywhere, and a per-user installer.
+# Both carry the same self-contained build, and starting with Windows works the same way in both — the
+# application writes its own entry under the user's Run key, from wherever it is.
+#
+# They come from two publishes, because the portable one is a single executable and the installer needs
+# the ordinary folder. Measured, interleaved, on this machine: the bundle costs nothing to load (1020 ms
+# against the folder's 1024 ms), and it is the same 140 MB either way, so the archive stays about 61 MB.
+# EnableCompressionInSingleFile was tried and dropped: 67 MB as a bare file, but 2028 ms to load, every
+# launch and not just the first — a bad trade for something that starts at sign-in.
 #
 # The installer asks for no administrator rights and installs under %LOCALAPPDATA%\Programs: the tray
 # application belongs to one user, its startup entry is that user's, and it writes a shortcut next to its
@@ -15,7 +21,7 @@ $projectPath = Join-Path $projectRoot 'src/DownloadsStack/DownloadsStack.csproj'
 $artifactsPath = Join-Path $projectRoot 'artifacts'
 $stagePath = Join-Path $artifactsPath 'stage'
 $appPath = Join-Path $stagePath 'app'
-$portablePath = Join-Path $stagePath 'portable'
+$singlePath = Join-Path $stagePath 'single'
 
 $version = @(([xml](Get-Content -LiteralPath $projectPath)).Project.PropertyGroup |
     ForEach-Object { $_.Version } | Where-Object { $_ })[0]
@@ -56,26 +62,30 @@ if (-not $SkipInstaller) {
     $outputs += $msiPath
 }
 
-# The archive carries one folder, so unpacking it into a downloads folder does not scatter 400 files.
-$portableRoot = Join-Path $portablePath 'Downloads Stack'
-New-Item -ItemType Directory -Path $portableRoot -Force | Out-Null
-Copy-Item -Path (Join-Path $appPath '*') -Destination $portableRoot -Recurse
-Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $portableRoot
+# The portable build is one executable, so unpacking the archive puts a single file wherever it is
+# unpacked instead of scattering 400. The shortcut the application writes next to itself takes its icon
+# from the executable, so nothing has to travel alongside it.
+dotnet publish $projectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true `
+    -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o $singlePath
+if ($LASTEXITCODE -ne 0) { throw 'Publishing the single file failed.' }
+
+$singleExecutable = Join-Path $singlePath 'Downloads Stack.exe'
+$singleCheck = Start-Process -FilePath $singleExecutable -ArgumentList '--check-ui' -WindowStyle Hidden -Wait -PassThru
+if ($singleCheck.ExitCode -ne 0) {
+    Get-Content -LiteralPath (Join-Path $singlePath 'ui-check.log')
+    throw 'The single-file application failed to load its resources.'
+}
+
 $zipPath = Join-Path $artifactsPath "DownloadsStack-$version-portable-win-x64.zip"
 if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 Add-Type -AssemblyName System.IO.Compression # ZipArchiveMode lives here, the rest next door.
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-# Not Compress-Archive: it takes minutes over hundreds of megabytes and this takes seconds. Entry by
-# entry rather than CreateFromDirectory, because under Windows PowerShell that writes backslashes into
-# the names, which is not what the format says and not what every unpacker reads back as folders.
-$root = (Get-Item -LiteralPath $portablePath).FullName
+# Not Compress-Archive: it takes minutes over a file this size and this takes seconds.
 $archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
-    foreach ($file in Get-ChildItem -LiteralPath $root -Recurse -File) {
-        $entry = $file.FullName.Substring($root.Length + 1).Replace('\', '/')
-        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
-            $archive, $file.FullName, $entry, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
-    }
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+        $archive, $singleExecutable, 'Downloads Stack.exe',
+        [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
 } finally { $archive.Dispose() }
 $outputs += $zipPath
 

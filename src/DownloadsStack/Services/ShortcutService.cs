@@ -29,7 +29,9 @@ internal static class ShortcutService
                 shellLink.SetPath(executable);
                 shellLink.SetWorkingDirectory(directory);
                 shellLink.SetDescription(Localization.Loc.T("Shortcut_Description"));
-                shellLink.SetIconLocation(Path.Combine(directory, "DownloadsStack.App.ico"), 0);
+                // The icon comes out of the executable rather than a file beside it: the portable build is
+                // one executable with nothing next to it, and the apphost carries the same image anyway.
+                shellLink.SetIconLocation(executable, 0);
                 shellLink.SetShowCmd(1);
                 var store = (IPropertyStore)link;
                 using var value = PropVariant.String(NativeMethods.AppId);

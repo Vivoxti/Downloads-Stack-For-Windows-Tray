@@ -472,3 +472,40 @@ through `--quit` (the file is locked otherwise) and started again from the new b
 
 **Not checked:** the behaviour on a monitor where the chosen number of rows does not fit — on this machine
 twenty rows do fit into the work area.
+
+## The portable build as one executable — 19.09.2026
+
+The portable package used to be a folder of 401 files. It is now a single executable, and the archive holds
+nothing else. Everything below was measured on this machine with the builds run one after another,
+interleaved, six times each; the medians are within 1% of one another and the first run of each set, which
+reads the file cold, is left in the table as the outlier it is.
+
+The stopwatch is around `--check-ui` on the published executable: it loads the Application resources, the
+main window, the settings and the tray icons, which is the part of startup a bundle can make slower.
+
+| | to download | unpacked | `--check-ui`, median |
+|---|---|---|---|
+| Folder of 401 files (before) | 60.9 MB | 401 files, 140.6 MB | 1024 ms |
+| One executable, in the archive | 61.5 MB | 1 file, 149.5 MB | 1020 ms |
+| One executable, bare | 149.5 MB | 1 file | 1020 ms |
+| One executable, `EnableCompressionInSingleFile` | 67.0 MB | 1 file | 2028 ms |
+
+So the bundle costs nothing to load: 1020 ms against 1024, which is noise. Compression was dropped and the
+reason is the last row: it halves the download but doubles the load, on every launch and not just the first,
+because the assemblies are decompressed into memory each time rather than extracted once. This application
+starts at sign-in, so a second of CPU per launch is the wrong thing to trade a download for.
+
+The archive rather than the bare executable was chosen for the release: the same 61 MB to download as
+before, and unpacking yields one file instead of a folder. `ReadyToRun` stays on, which `dev-build.ps1`
+turns off for build speed — that is the whole difference between the file in the project root and the
+released one.
+
+`ShortcutService` now takes the shortcut's icon from the executable instead of a `DownloadsStack.App.ico`
+beside it. Without that, the shortcut the application writes next to itself would have had no icon in a
+portable folder holding one file. The apphost carries the same image through `<ApplicationIcon>`, and the
+installed copy is unaffected: the installer keeps using the `.ico` for its own Start menu shortcut, which is
+compiled into the package.
+
+**Not checked:** how the single file behaves against an antivirus other than the one on this machine —
+an unsigned executable that unpacks native libraries into `%TEMP%` on first run is exactly the shape
+heuristics dislike, and nothing here says how a given scanner will treat it.

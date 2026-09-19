@@ -280,7 +280,8 @@ The windowless command line: `--autostart-on`, `--autostart-off` and `--quit`. T
 
 ### Delivery: portable build and installer — 19.09.2026
 
-`scripts/package.ps1` builds the release from a single publish: a zip with one folder inside, and an MSI. The installer is per-user, into `%LOCALAPPDATA%\Programs\Downloads Stack`, without an administrator and without UAC. That is how it should be: the application belongs to one user, so does its startup entry, and it writes a shortcut next to its own exe, which a folder under Program Files would not allow.
+`scripts/package.ps1` builds the release: a zip with one executable inside, and an MSI. They come from two
+publishes, because a single-file bundle and the folder the installer carries are different layouts. The installer is per-user, into `%LOCALAPPDATA%\Programs\Downloads Stack`, without an administrator and without UAC. That is how it should be: the application belongs to one user, so does its startup entry, and it writes a shortcut next to its own exe, which a folder under Program Files would not allow.
 
 The installer does not touch the `Run` key — neither on install nor on uninstall — and that is the result of measurement, not of saved effort. A registry change made inside a Windows Installer transaction does not survive that transaction: neither the package's own `RegistryValue`, nor a write by a program launched from a custom action which immediately re-reads it and sees it written. The numbers and the course of the check are in `CHECKS.md`. So the entry has one owner, the application, and the consequence is written down honestly in the README: uninstalling does not remove startup if it had been turned on.
 

@@ -18,7 +18,7 @@ Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloa
 | Package | File | What it does |
 | --- | --- | --- |
 | Installer | `DownloadsStack-<version>-win-x64.msi` | Installs into `%LOCALAPPDATA%\Programs\Downloads Stack` for the current user: no administrator rights, no UAC prompt. Adds a Start menu shortcut and launches the application when it finishes. Removed through Installed apps. |
-| Portable | `DownloadsStack-<version>-portable-win-x64.zip` | Unpack it anywhere and run `Downloads Stack.exe`. Nothing appears anywhere in the system until you turn on startup yourself. |
+| Portable | `DownloadsStack-<version>-portable-win-x64.zip` | One executable inside. Unpack it anywhere and run `Downloads Stack.exe`. Nothing appears anywhere in the system until you turn on startup yourself. |
 
 The application is not signed with a certificate, so SmartScreen will warn you on the first run: More info → Run anyway.
 
@@ -98,9 +98,9 @@ From a script the windowless commands do the same: `"Downloads Stack.exe" --auto
 
 ## Releases: portable build and installer
 
-`scripts/package.ps1` builds both packages from a single publish (running the tests first; `-SkipTests` skips them):
+`scripts/package.ps1` builds both packages (running the tests first; `-SkipTests` skips them):
 
-- `artifacts/DownloadsStack-<version>-portable-win-x64.zip` — one "Downloads Stack" folder inside. Unpack it anywhere and run the exe; nothing appears in the system until startup is turned on for the first time.
+- `artifacts/DownloadsStack-<version>-portable-win-x64.zip` — one executable inside, about 61 MB to download. Unpack it anywhere and run the exe; nothing appears in the system until startup is turned on for the first time. The bundle costs nothing to load compared with the ordinary folder, and the shortcut the application writes next to itself takes its icon from the executable, so nothing has to travel alongside it. The numbers are in `CHECKS.md`.
 - `artifacts/DownloadsStack-<version>-win-x64.msi` — a per-user install into `%LOCALAPPDATA%\Programs\Downloads Stack`, without administrator rights and without a UAC prompt. It puts a Start menu shortcut with the same `AppUserModel.ID` the application uses, and launches it at the end. Upgrading over an installed version first asks the running instance to close (`--quit`), which is why it needs no reboot.
 
 Startup is turned on the same way in both packages — the checkbox in the settings. The installer does not touch the `Run` key at all, and that is a measured decision rather than an oversight: a registry change made inside a Windows Installer transaction did not survive that transaction — neither one written by the package itself, nor one written by the program the package launched from a custom action. The details and the numbers are in `CHECKS.md`.
