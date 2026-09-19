@@ -18,7 +18,7 @@
     <Product>Downloads Stack</Product>
     <!-- The one place a release is numbered: scripts/package.ps1 reads it for the archive name and for
          the installer, whose upgrade logic compares these three numbers and nothing else. -->
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Company>Vivoderin</Company>
     <Copyright>Vivoderin</Copyright>
     <Description>Downloads Stack</Description>

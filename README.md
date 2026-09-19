@@ -108,8 +108,8 @@ Startup is turned on the same way in both packages — the checkbox in the setti
 The reverse follows from it: uninstalling does not remove the startup entry if the user had turned it on. Clear the checkbox before uninstalling, or remove the line in Task Manager's Startup apps; an entry pointing at a deleted file is simply ignored by Windows.
 
 ```powershell
-msiexec /i "artifacts\DownloadsStack-1.0.1-win-x64.msi" /qn
-msiexec /x "artifacts\DownloadsStack-1.0.1-win-x64.msi" /qn
+msiexec /i "artifacts\DownloadsStack-1.0.2-win-x64.msi" /qn
+msiexec /x "artifacts\DownloadsStack-1.0.2-win-x64.msi" /qn
 ```
 
 ## Building

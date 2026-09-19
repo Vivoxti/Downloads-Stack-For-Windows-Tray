@@ -23,7 +23,7 @@
 
     <Icon Id="AppIcon" SourceFile="$(PublishDir)\DownloadsStack.App.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Vivoderin/WindowsToolbarDownloadList" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray" />
 
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="ProgramsFolder" Name="Programs">
