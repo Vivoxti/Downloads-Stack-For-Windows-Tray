@@ -1,15 +1,29 @@
-# Downloads Stack
+# Downloads Stack — a macOS Dock stack for the Windows tray
 
-A Windows 11 application: an icon in the system tray, next to the clock, opens a compact list of the newest files from the folders you choose.
+**An attempt to bring the macOS Dock's Downloads stack to Windows 11.** On a Mac, the Downloads folder sits
+in the Dock and fans open into the newest files. Windows has no such thing, so this is it: an icon in the
+system tray, next to the clock, that opens a compact list of the newest files from the folders you choose.
 
 [![Release](https://img.shields.io/github/v/release/Vivoxti/Downloads-Stack-For-Windows-Tray?label=release&color=25BC96)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Vivoxti/Downloads-Stack-For-Windows-Tray/total?label=downloads)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases)
 [![Build](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml/badge.svg)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+<p align="center">
+  <img src="docs/demo.gif" alt="The tray icon is clicked and a transparent list of recent files unfolds above the taskbar; a file is dragged out of it" width="440">
+</p>
+
 Windows 11 · .NET 10 · WPF · a self-contained build, with nothing to install beforehand.
 
-The panel is fully transparent: all you see are the system file icons and the file names. One click opens a file, dragging hands over a real Shell data object, a right click brings up the classic File Explorer context menu. There can be several source folders; Downloads is connected by default.
+It is a list rather than a fan: no stack animation, no grid view, no Dock. What it borrows is the idea —
+the newest downloads one click away, without opening File Explorer. The panel is fully transparent, so all
+you see are the system file icons and the file names. One click opens a file, dragging hands over a real
+Shell data object, a right click brings up the classic File Explorer context menu. There can be several
+source folders; Downloads is connected by default.
+
+<p align="center">
+  <img src="docs/flyout.png" alt="The open panel: file icons and names over the desktop, with no window frame, above the Windows taskbar" width="380">
+</p>
 
 ## Install
 
@@ -56,6 +70,10 @@ A single left click, or Enter, opens the file. A right click outlines the row an
 
 This is a list of the files in the folders you chose, not a download log across all browsers. Unfinished downloads are filtered out heuristically. For older files the creation date approximates the order; for new ones the discovery date is kept. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
 
+<p align="center">
+  <img src="docs/settings.png" alt="The settings window: the list of source folders, the sort order, the startup checkbox, and the sliders for how many files to show and how opaque the backdrop behind each name is" width="540">
+</p>
+
 ### Readable names on any wallpaper
 
 Each name gets its own dark backdrop, fitted to the visible text, with blurred edges. The panel's own background stays transparent.
@@ -85,6 +103,10 @@ On hover the icon grows to 135% with a soft spring and lifts by 2 DIP, then retu
 Animations ask the current monitor for its refresh rate. Content is cached while opening and closing; the text backdrops are cached as well, so the blur is not recomputed every frame. The actual frame rate is up to WPF/DWM and the load, especially for a transparent window.
 
 The tray icon shows the state: white when the list is closed, green #25BC96 when it is open. On close — including Escape, a click outside and the end of a drag — the colour goes back to white. The icon's tooltip switches between "Open the list" and "Close the list". The application icon remains separate.
+
+<p align="center">
+  <img src="docs/tray.png" alt="The same corner of the tray twice: the icon green while the list is open, and white while it is closed" width="314">
+</p>
 
 ## Starting with Windows
 
