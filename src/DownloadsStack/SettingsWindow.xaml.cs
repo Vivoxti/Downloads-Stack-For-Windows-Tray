@@ -22,7 +22,7 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent(); _model = model; DataContext = model;
         // Windows owns this answer, and Task Manager can change it behind the application's back.
-        model.RefreshAutostart();
+        Loaded += async (_, _) => await model.RefreshAutostartAsync();
         // Rounded corners and the dark non-client frame; the panel itself is painted opaque.
         SourceInitialized += (_, _) => MainWindow.ApplyWindowAppearance(new System.Windows.Interop.WindowInteropHelper(this).Handle);
         FolderList.SelectionChanged += (_, _) =>

@@ -1,5 +1,6 @@
 using System.IO;
 using Microsoft.Win32;
+using Windows.ApplicationModel;
 
 namespace DownloadsStack.Services;
 
@@ -15,9 +16,8 @@ public enum AutostartState
 }
 
 /// <summary>
-/// Starting with Windows through the per-user <c>Run</c> key. No administrator rights, no scheduled task
-/// and no file in a startup folder: the same entry works for a copied-out portable build and for an
-/// installed one, and the user can see and switch it off in Task Manager like every other startup app.
+/// Starting with Windows through the package startup task in an MSIX build, or through the per-user
+/// <c>Run</c> key in an unpackaged build. Both are visible in Windows' Startup apps UI.
 /// </summary>
 public sealed class AutostartService
 {
@@ -27,15 +27,19 @@ public sealed class AutostartService
     /// by the description of the executable it names.
     /// </summary>
     public const string ValueName = "DownloadsStack";
+    public const string StartupTaskId = "DownloadsStackStartup";
     private const string DefaultRunPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string DefaultApprovedPath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
     private readonly string _runPath, _approvedPath;
+    private readonly bool _packaged;
 
     /// <summary>The paths are arguments only so the tests can work in a scratch key of their own.</summary>
     public AutostartService(string? runPath = null, string? approvedPath = null)
     {
         _runPath = runPath ?? DefaultRunPath;
         _approvedPath = approvedPath ?? DefaultApprovedPath;
+        // Explicit scratch paths are used by tests and always select the registry backend.
+        _packaged = runPath is null && approvedPath is null && HasPackageIdentity();
     }
 
     /// <summary>Quoted: the path holds a space, and an unquoted one would be read as two arguments.</summary>
@@ -43,11 +47,27 @@ public sealed class AutostartService
 
     public AutostartState Read()
     {
+        if (_packaged) return ReadPackagedAsync().GetAwaiter().GetResult();
+        return ReadRegistry();
+    }
+
+    public Task<AutostartState> ReadAsync() => _packaged ? ReadPackagedAsync() : Task.FromResult(ReadRegistry());
+
+    private AutostartState ReadRegistry()
+    {
         if (StoredCommand() is null) return AutostartState.Off;
         return IsBlocked() ? AutostartState.BlockedByWindows : AutostartState.On;
     }
 
     public void Set(bool enabled)
+    {
+        if (_packaged) { SetPackagedAsync(enabled).GetAwaiter().GetResult(); return; }
+        SetRegistry(enabled);
+    }
+
+    public Task SetAsync(bool enabled) => _packaged ? SetPackagedAsync(enabled) : Task.Run(() => SetRegistry(enabled));
+
+    private void SetRegistry(bool enabled)
     {
         if (enabled)
         {
@@ -70,13 +90,38 @@ public sealed class AutostartService
     /// <returns>Whether the entry was rewritten.</returns>
     public bool Repair()
     {
+        if (_packaged) return false; // MSIX updates preserve the task without embedding a versioned path.
         if (StoredCommand() is not { } command) return false;
         if (TargetOf(command) is { } target && File.Exists(target)) return false;
         Set(true);
         return true;
     }
 
-    public Task<bool> RepairAsync() => Task.Run(Repair);
+    public Task<bool> RepairAsync() => _packaged ? Task.FromResult(false) : Task.Run(Repair);
+
+    private static bool HasPackageIdentity()
+    {
+        try { return Package.Current.Id is not null; }
+        catch (InvalidOperationException) { return false; }
+    }
+
+    private static async Task<AutostartState> ReadPackagedAsync()
+    {
+        var task = await StartupTask.GetAsync(StartupTaskId);
+        return task.State switch
+        {
+            StartupTaskState.Enabled or StartupTaskState.EnabledByPolicy => AutostartState.On,
+            StartupTaskState.DisabledByUser or StartupTaskState.DisabledByPolicy => AutostartState.BlockedByWindows,
+            _ => AutostartState.Off,
+        };
+    }
+
+    private static async Task SetPackagedAsync(bool enabled)
+    {
+        var task = await StartupTask.GetAsync(StartupTaskId);
+        if (enabled) await task.RequestEnableAsync();
+        else task.Disable();
+    }
 
     private string? StoredCommand()
     {

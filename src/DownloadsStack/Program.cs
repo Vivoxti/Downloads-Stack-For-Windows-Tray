@@ -61,7 +61,7 @@ internal static class Program
             try { done = SingleInstanceService.RequestExitAsync(TimeSpan.FromSeconds(20)).GetAwaiter().GetResult(); }
             catch (Exception ex) { LocalLog.Write("Quit", ex); done = false; }
         if (args.Contains("--autostart-on") || args.Contains("--autostart-off"))
-            try { new AutostartService().Set(args.Contains("--autostart-on")); }
+            try { new AutostartService().SetAsync(args.Contains("--autostart-on")).GetAwaiter().GetResult(); }
             catch (Exception ex) { LocalLog.Write("Autostart", ex); done = false; }
         return done ? 0 : 1;
     }

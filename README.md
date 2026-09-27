@@ -30,7 +30,9 @@ Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloa
 | Installer | `DownloadsStack-<version>-win-x64.msi` | An ordinary wizard — welcome, licence, where to put it, install — for all users, into `C:\Program Files\Downloads Stack`. One UAC prompt. The folder can be changed, and whichever folder is picked gets a `Downloads Stack` subfolder inside it. Adds a Start menu shortcut, launches the application when it finishes, and is removed through Installed apps. |
 | Portable | `DownloadsStack-<version>-portable-win-x64.zip` | One executable inside. Unpack it anywhere and run `Downloads Stack.exe`. Nothing appears anywhere in the system until you turn on startup yourself. |
 
-The application is not signed with a certificate, so SmartScreen will warn you on the first run: More info → Run anyway.
+The GitHub MSI and portable builds are not signed with a certificate, so SmartScreen can warn and Smart
+App Control can block them. The Microsoft Store build is certified and signed by Microsoft and does not
+have this limitation.
 
 If you want it without administrator rights, take the portable build: one executable, and nothing written outside the folder it sits in.
 
@@ -82,6 +84,23 @@ dotnet publish src/DownloadsStack/DownloadsStack.csproj -c Release -r win-x64 --
 Publish runs crossgen (`PublishReadyToRun`), so it takes noticeably longer than an ordinary build; at application startup that saves most of the JIT work. WinForms is not used: the tray icon is registered through `Shell_NotifyIcon` directly.
 
 `scripts/package.ps1` builds the two release packages — the single-executable archive and the installer — running the tests first, which `-SkipTests` skips.
+
+`scripts/package-store.ps1` builds the unsigned x64 MSIX for Microsoft Store certification. First reserve
+the product name in Partner Center, then copy **Package/Identity/Name** and **Package/Identity/Publisher**
+verbatim from its Product identity page:
+
+```powershell
+scripts/package-store.ps1 `
+  -IdentityName 'the value from Partner Center' `
+  -Publisher 'the value from Partner Center' `
+  -DisplayName 'the reserved Store name' `
+  -PublisherDisplayName 'Vivoderin'
+```
+
+The output is `artifacts/DownloadsStack-<version>-store-win-x64.msix`. Upload that file on the submission's
+Packages page; it is intentionally unsigned because the Store signs it after certification. The MSIX uses
+Windows' package `StartupTask` rather than a versioned executable path in the Run registry key, so startup
+continues to work after Store updates. The public privacy statement is [`PRIVACY.md`](PRIVACY.md).
 
 The installer is built by WiX 6, wired up as a local tool of the repository: `dotnet tool restore` is its entire toolchain, and `package.ps1` does that itself. The package markup is `packaging/DownloadsStack.wxs`. The version number lives in one place, in `<Version>` in `src/DownloadsStack/DownloadsStack.csproj`: both the archive name and the installer's upgrade logic read it from there.
 

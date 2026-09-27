@@ -52,13 +52,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly AutostartService _autostart = new();
     private AutostartState _autostartState;
     /// <summary>
-    /// Reads what Windows is set to do at sign-in. Synchronous by design: one registry value, read in
-    /// microseconds, and every caller needs the answer before it can show anything truthful.
+    /// Reads what Windows is set to do at sign-in. A packaged build asks the WinRT StartupTask service;
+    /// an unpackaged build completes immediately after reading one registry value.
     /// </summary>
-    public void RefreshAutostart()
+    public async Task RefreshAutostartAsync()
     {
         var previous = _autostartState;
-        try { _autostartState = _autostart.Read(); }
+        try { _autostartState = await _autostart.ReadAsync(); }
         catch (Exception ex) { LocalLog.Write("Autostart", ex); _autostartState = AutostartState.Off; }
         if (_autostartState == previous) return;
         Changed(nameof(RunAtLogon)); Changed(nameof(AutostartBlocked));
@@ -66,9 +66,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task SetRunAtLogonAsync(bool enabled)
     {
         if (enabled == RunAtLogon) return;
-        await Task.Run(() => _autostart.Set(enabled));
+        await _autostart.SetAsync(enabled);
         if (_disposed) return;
-        RefreshAutostart();
+        await RefreshAutostartAsync();
     }
     /// <summary>How opaque the plate under a file name is, in percent. See <see cref="BackdropBrush"/>.</summary>
     public int BackdropOpacity => _configuration.BackdropOpacity;
@@ -162,7 +162,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _downloads.Updated += Post;
         _settingsLoad = _settings.LoadAsync();
         _indexLoad = _index.LoadAsync();
-        RefreshAutostart();
     }
     private void Post(DownloadsSnapshot snapshot)
     {
@@ -175,6 +174,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         try
         {
+            await RefreshAutostartAsync();
             var settings = await _settingsLoad;
             var indexMessage = await _indexLoad;
             if (_disposed) return;
