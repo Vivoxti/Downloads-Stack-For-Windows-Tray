@@ -8,6 +8,7 @@ system tray, next to the clock, that opens a compact list of the newest files fr
 [![Downloads](https://img.shields.io/github/downloads/Vivoxti/Downloads-Stack-For-Windows-Tray/total?label=downloads)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases)
 [![Build](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml/badge.svg)](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Get it from Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20the%20app-0078D4?logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9MXTKMZQLJ6B)
 
 <p align="center">
   <img src="docs/demo.gif" alt="The tray icon is clicked and a transparent list of recent files unfolds above the taskbar; a file is dragged out of it" width="440">
@@ -22,6 +23,9 @@ Shell data object, a right click brings up the classic File Explorer context men
 source folders; Downloads is connected by default.
 
 ## Install
+
+The signed, automatically updated version is available from the
+[Microsoft Store](https://apps.microsoft.com/detail/9MXTKMZQLJ6B).
 
 Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest). Both packages carry the same application — the only choice is how it gets onto the machine.
 
