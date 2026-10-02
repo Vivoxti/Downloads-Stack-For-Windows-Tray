@@ -54,7 +54,7 @@ Before you start a new build, close the previous instance through Exit. Otherwis
 
 ## The list and its settings
 
-No title, no buttons, no scrolling: the newest files that fit, the newest at the bottom. A left click or Enter opens one, a right click gives the real Windows Shell menu, and dragging hands the file to whatever accepts it. Each name carries its own dark backdrop so it stays readable over any wallpaper, and PNG, JPG and MP4 show the system thumbnail instead of a generic icon.
+No title, no buttons, no scrolling: the newest files that fit, the newest at the bottom. A left click or Enter opens one, a middle click opens its containing folder in File Explorer, a right click gives the real Windows Shell menu, and dragging hands the file to whatever accepts it. Each name carries its own dark backdrop so it stays readable over any wallpaper, and PNG, JPG and MP4 show the system thumbnail instead of a generic icon.
 
 <p align="center">
   <img src="docs/settings.png" alt="The settings window: the list of source folders, the sort order, the startup checkbox, and the sliders for how many files to show and how opaque the backdrop behind each name is" width="540">

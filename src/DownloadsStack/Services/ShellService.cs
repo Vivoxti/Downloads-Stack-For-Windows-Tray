@@ -21,6 +21,13 @@ internal static class ShellService
         Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     }
 
+    public static void OpenContainingFolder(string path)
+    {
+        if (!File.Exists(path)) throw new FileNotFoundException(Loc.T("Error_FileMissing"), path);
+        var folder = Path.GetDirectoryName(Path.GetFullPath(path))!;
+        Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
+    }
+
     public static uint Drag(string path, nint hwnd)
     {
         if (!File.Exists(path)) throw new FileNotFoundException(Loc.T("Error_FileMissing"), path);

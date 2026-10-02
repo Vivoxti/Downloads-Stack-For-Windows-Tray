@@ -20,6 +20,7 @@ public partial class MainWindow : Window
 {
     private Point _press;
     private string? _dragPath;
+    private string? _middlePressPath;
     private bool _dragConsumed;
     private bool _ownedInteraction;
     private nint _lastMonitor;
@@ -49,6 +50,7 @@ public partial class MainWindow : Window
     internal nint TrayOwnerHandle { get; set; }
     internal Action<string, nint> DragOperation { get; set; } = (path, hwnd) => ShellService.Drag(path, hwnd);
     internal Action<string> OpenOperation { get; set; } = ShellService.OpenFile;
+    internal Action<string> OpenContainingFolderOperation { get; set; } = ShellService.OpenContainingFolder;
     internal Func<string, nint, int, int, bool> ContextMenuOperation { get; set; } = ShellContextMenu.Show;
     internal Func<SettingsWindow, bool?> SettingsDialogOperation { get; set; } = settings => settings.ShowDialog();
     private ListWindowState _listState = ListWindowState.Hidden;
@@ -323,6 +325,7 @@ public partial class MainWindow : Window
     private void MinimizeList(bool fromDeactivation = false)
     {
         if (ListState is ListWindowState.Dragging or ListWindowState.Exiting or ListWindowState.Hidden or ListWindowState.Hiding || _ownedInteraction || _menuDepth > 0) return;
+        _middlePressPath = null;
         // Suppress only the tray click that caused deactivation, not the next click after a drag.
         _hiddenAt = fromDeactivation ? Environment.TickCount64 : 0;
         ResetPathTooltips(false);
@@ -468,6 +471,27 @@ public partial class MainWindow : Window
         if (ListState != ListWindowState.Visible || _dragConsumed || pressedPath is null) return;
         if (ItemAt(e.OriginalSource as DependencyObject) is DownloadItem file &&
             string.Equals(file.FullPath, pressedPath, StringComparison.OrdinalIgnoreCase)) Open(file.FullPath);
+    }
+
+    private void OnMiddlePress(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle) return;
+        e.Handled = true;
+        _middlePressPath = ListState == ListWindowState.Visible && _menuDepth == 0
+            ? ItemAt(e.OriginalSource as DependencyObject)?.FullPath : null;
+    }
+
+    private void OnMiddleRelease(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle) return;
+        e.Handled = true;
+        var pressedPath = _middlePressPath;
+        _middlePressPath = null;
+        if (ListState != ListWindowState.Visible || _menuDepth > 0 || pressedPath is null) return;
+        if (ItemAt(e.OriginalSource as DependencyObject) is not DownloadItem file ||
+            !string.Equals(file.FullPath, pressedPath, StringComparison.OrdinalIgnoreCase)) return;
+        try { OpenContainingFolderOperation(file.FullPath); MinimizeList(); }
+        catch (Exception ex) { ShowError(ex); }
     }
 
     private void OnMouseMove(object sender, MouseEventArgs e)

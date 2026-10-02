@@ -65,6 +65,23 @@ public class FlyoutInteractionTests
                 Assert.Equal(0, ToolTipService.GetBetweenShowDelay(row));
                 var opens = 0;
                 window.OpenOperation = path => { Assert.Equal(@"C:\test\example.txt", path); opens++; };
+                var folderOpens = 0;
+                window.OpenContainingFolderOperation = path => { Assert.Equal(@"C:\test\example.txt", path); folderOpens++; };
+                RaiseButton(row, Mouse.PreviewMouseUpEvent, MouseButton.Middle);
+                Assert.Equal(0, folderOpens); // A release without a press must not open anything.
+                RaiseButton(row, Mouse.PreviewMouseDownEvent, MouseButton.Middle);
+                RaiseButton(list, Mouse.PreviewMouseUpEvent, MouseButton.Middle);
+                Assert.Equal(0, folderOpens); // Releasing outside the row cancels the click.
+                RaiseButton(row, Mouse.PreviewMouseDownEvent, MouseButton.Middle);
+                Assert.Equal(0, folderOpens);
+                Assert.Null(list.SelectedItem);
+                RaiseButton(row, Mouse.PreviewMouseUpEvent, MouseButton.Middle);
+                Assert.Equal(1, folderOpens);
+                Assert.Equal(0, opens);
+                Assert.Equal(ListWindowState.Hidden, window.ListState);
+                window.RestoreList(false);
+                list.UpdateLayout();
+                row = Assert.IsType<ListBoxItem>(list.ItemContainerGenerator.ContainerFromIndex(0));
                 RaiseButton(row, UIElement.PreviewMouseLeftButtonDownEvent, MouseButton.Left);
                 Assert.Equal(0, opens); // Pressing must leave time to start a drag.
                 Assert.Null(list.SelectedItem);
@@ -354,7 +371,7 @@ public class FlyoutInteractionTests
     private static void RaiseButton(UIElement row, RoutedEvent routedEvent, MouseButton button) =>
         row.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, button)
         {
-            RoutedEvent = routedEvent == UIElement.PreviewMouseLeftButtonUpEvent || routedEvent == UIElement.PreviewMouseRightButtonUpEvent
+            RoutedEvent = routedEvent == Mouse.PreviewMouseUpEvent || routedEvent == UIElement.PreviewMouseLeftButtonUpEvent || routedEvent == UIElement.PreviewMouseRightButtonUpEvent
                 ? Mouse.PreviewMouseUpEvent : Mouse.PreviewMouseDownEvent
         });
 

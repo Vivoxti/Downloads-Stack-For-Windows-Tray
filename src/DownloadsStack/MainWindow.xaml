@@ -9,7 +9,8 @@
         <Grid>
             <ListBox x:Name="FileList" AutomationProperties.Name="{Binding [List_Name], Source={x:Static loc:Loc.Text}}" FocusVisualStyle="{x:Null}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                     PreviewMouseLeftButtonDown="OnMouseDown" PreviewMouseLeftButtonUp="OnMouseUp" PreviewMouseMove="OnMouseMove" PreviewMouseRightButtonDown="OnRightPress" PreviewMouseRightButtonUp="OnRightClick">
+                     PreviewMouseLeftButtonDown="OnMouseDown" PreviewMouseLeftButtonUp="OnMouseUp" PreviewMouseMove="OnMouseMove" PreviewMouseRightButtonDown="OnRightPress" PreviewMouseRightButtonUp="OnRightClick"
+                     PreviewMouseDown="OnMiddlePress" PreviewMouseUp="OnMiddleRelease">
                 <!-- No ScrollViewer: keyboard and mouse cannot scroll hidden items into view. -->
                 <ListBox.Template><ControlTemplate TargetType="ListBox"><ItemsPresenter/></ControlTemplate></ListBox.Template>
                 <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
