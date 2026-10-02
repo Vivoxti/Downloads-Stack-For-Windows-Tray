@@ -85,16 +85,11 @@ Publish runs crossgen (`PublishReadyToRun`), so it takes noticeably longer than 
 
 `scripts/package.ps1` builds the two release packages — the single-executable archive and the installer — running the tests first, which `-SkipTests` skips.
 
-`scripts/package-store.ps1` builds the unsigned x64 MSIX for Microsoft Store certification. First reserve
-the product name in Partner Center, then copy **Package/Identity/Name** and **Package/Identity/Publisher**
-verbatim from its Product identity page:
+`scripts/package-store.ps1` builds the unsigned x64 MSIX for Microsoft Store certification. Its defaults
+are the exact identity assigned to Downloads Stack in Partner Center, so a release build is simply:
 
 ```powershell
-scripts/package-store.ps1 `
-  -IdentityName 'the value from Partner Center' `
-  -Publisher 'the value from Partner Center' `
-  -DisplayName 'the reserved Store name' `
-  -PublisherDisplayName 'Vivoderin'
+scripts/package-store.ps1
 ```
 
 The output is `artifacts/DownloadsStack-<version>-store-win-x64.msix`. Upload that file on the submission's

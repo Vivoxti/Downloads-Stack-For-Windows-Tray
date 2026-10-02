@@ -2,8 +2,8 @@
 # invented here: both values must be copied verbatim from Partner Center after reserving the product name.
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$IdentityName,
-    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Publisher,
+    [ValidateNotNullOrEmpty()][string]$IdentityName = 'Vivoderin.DownloadsStack',
+    [ValidateNotNullOrEmpty()][string]$Publisher = 'CN=FBE5C2B6-BF2B-47A1-ABFA-F14472F4933F',
     [ValidateNotNullOrEmpty()][string]$DisplayName = 'Downloads Stack',
     [string]$PublisherDisplayName = 'Vivoderin',
     [switch]$SkipTests
