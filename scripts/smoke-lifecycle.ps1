@@ -101,7 +101,17 @@ try {
         [DownloadsStackProbe]::SendMessageTimeoutW($trayOpened, 0x0010, [IntPtr]0, [IntPtr]0, 2, 3000, [ref]([IntPtr]::Zero)) | Out-Null
     }
     Wait-For { [DownloadsStackProbe]::FindVisibleWindow($primary.Id) -eq [IntPtr]::Zero } 4 | Out-Null
-    # A second launch has to reach the running instance over its pipe and open the list there.
+    # The way Windows starts this application at sign-in must open nothing at all. Two launches reach the
+    # running instance at sign-in - its own startup entry and Windows restoring what was running before -
+    # and the list appearing by itself on a desktop nobody has touched is what this guards against.
+    $startupLaunch = Start-Process -FilePath $Executable -ArgumentList '--autostart' -PassThru
+    $startupLaunch.WaitForExit(10000) | Out-Null
+    Start-Sleep -Milliseconds 1200
+    $startupLaunchStaysHidden = ([DownloadsStackProbe]::FindVisibleWindow($primary.Id) -eq [IntPtr]::Zero)
+    # A person's launch does open the list - but only once the application is past the settling period it
+    # treats as part of sign-in. The wait is what that period costs this check.
+    $settling = [TimeSpan]::FromSeconds(30) - ([DateTime]::UtcNow - $primary.StartTime.ToUniversalTime())
+    if ($settling -gt [TimeSpan]::Zero) { Start-Sleep -Milliseconds ($settling.TotalMilliseconds + 500) }
     $secondary = Start-Process -FilePath $Executable -PassThru
     $secondExited = $secondary.WaitForExit(10000)
     $shown = Wait-For { [DownloadsStackProbe]::FindVisibleWindow($primary.Id) -ne [IntPtr]::Zero }
@@ -133,6 +143,7 @@ try {
     $report = [ordered]@{
         startsHiddenInTray = $startsHidden
         trayIconSurvivesShellRestart = $trayClickOpens
+        startupLaunchStaysHidden = $startupLaunchStaysHidden
         secondaryExited = $secondExited
         secondaryExitCode = $(if ($secondExited) { $secondary.ExitCode } else { $null })
         listOpenedBySecondLaunch = $shown

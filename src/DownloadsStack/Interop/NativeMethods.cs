@@ -44,6 +44,12 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool SetForegroundWindow(nint hwnd);
     [DllImport("user32.dll")] internal static extern bool AllowSetForegroundWindow(uint processId);
+    /// <summary>
+    /// The command line Windows is to use when it starts this application again by itself — after an
+    /// update, or after a Restart Manager shutdown. The executable's own name is not part of it.
+    /// </summary>
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    internal static extern int RegisterApplicationRestart(string? commandLine, uint flags);
     [DllImport("user32.dll", EntryPoint = "PostMessageW")]
     [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool PostMessage(nint hwnd, uint message, nint wParam, nint lParam);
     [DllImport("user32.dll")] internal static extern bool GetCursorPos(out Point point);

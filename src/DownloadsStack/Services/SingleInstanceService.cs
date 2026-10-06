@@ -57,6 +57,17 @@ internal sealed class SingleInstanceService : IDisposable
         });
     }
 
+    /// <summary>
+    /// What a second launch asks the instance that is already running to do — or nothing at all, when
+    /// Windows started it rather than a person. At sign-in this application is started more than once:
+    /// by its own startup entry, and by Windows restoring what was running when the user signed out.
+    /// Whichever of them gets there first, the other must not throw the list onto the screen.
+    /// </summary>
+    internal static InstanceCommand? SecondLaunchCommand(string[] args) =>
+        args.Contains(AutostartService.Argument) ? null
+        : args.Contains("--keyboard") ? InstanceCommand.ShowKeyboard
+        : InstanceCommand.ShowCursor;
+
     public async Task SignalAsync(InstanceCommand command)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));

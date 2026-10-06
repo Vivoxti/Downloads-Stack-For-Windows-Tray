@@ -49,7 +49,7 @@ Run `Downloads Stack.exe` — from the installed folder, from the unpacked archi
 - Left click on the icon shows and hides the list.
 - Escape, Alt+F4 and a click outside hide the list and leave the application running.
 - Right click on the icon opens the list, the folder settings and Exit.
-- Running the EXE again opens the list of the instance that is already running.
+- Running the EXE again opens the list of the instance that is already running — unless that instance started less than 30 seconds ago, or the launch is Windows' own at sign-in. See "Starting with Windows".
 - `--show` opens the panel immediately on the first run (useful for checking).
 - `--quit`, `--autostart-on`, `--autostart-off` are windowless commands: stop the running instance, turn startup on and off. See "Starting with Windows".
 - Exit in the menu ends the process completely and removes the icon.
@@ -74,7 +74,11 @@ The tray icon is white while the list is closed and green while it is open.
 
 ## Starting with Windows
 
-A "Start with Windows" checkbox in the settings, which writes the executable's path into `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — no administrator rights, no service, no scheduled task, and the same switch turns up in Task Manager's Startup apps, where turning it off wins.
+A "Start with Windows" checkbox in the settings, which writes the executable's path into `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — no administrator rights, no service, no scheduled task, and the same switch turns up in Task Manager's Startup apps, where turning it off wins. In the Store build the same checkbox works the package's startup task instead.
+
+Starting with Windows puts the icon in the tray and nothing else on the screen. That takes some doing, because sign-in starts this application more than once: its own startup entry runs it, and Windows separately restores whatever was running when the user signed out. One of those launches finds the other already there, and what a second launch normally does — open the list — is exactly what nobody wants on a desktop they have not reached yet, least of all at wherever the pointer happens to be sitting.
+
+So a launch is only taken for a person's if it looks like one. The startup entry carries `--autostart`, and the command line Windows is told to restart this application with after an update carries it too; neither ever asks for the list. A package startup task has no command line to mark, so there is a second rule behind the first: a launch arriving within 30 seconds of the one already running is the sign-in wave rather than somebody double-clicking a shortcut. The cost is that running the EXE again in the first half-minute shows nothing and has to be repeated; a window opening by itself at sign-in costs more.
 
 ## Building
 

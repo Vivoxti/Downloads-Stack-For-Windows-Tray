@@ -607,3 +607,29 @@ verified is where its properties end up, not how it looks. Upgrading from the pe
 versions 1.0.0 to 1.1.0 left behind is also unchecked, and is not expected to work: Windows Installer scopes
 upgrade detection, so a per-machine package will not find a per-user product. Those have to be removed
 through Installed apps first.
+
+## The list no longer opens by itself at sign-in — 06.10.2026
+
+All 84 tests pass (51 s). Three are new: a launch carrying `--autostart` asks the running instance for
+nothing while a bare one asks for the list and `--keyboard` asks for the keyboard variant; the argument
+survives the round trip through the quoted startup command, which is how Windows hands it back; and a
+request arriving inside the settling period is refused while a later one is not, with the period itself
+asserted to be between ten seconds and a minute so that neither end can drift unnoticed.
+
+The defect was reproduced before the fix and the fix measured after it, both on the build in the project
+root with the application already in the tray:
+
+- Launching it again with `--autostart` opened a 392x420 flyout at 1166,587. After the fix the same launch
+  leaves nothing on screen.
+- A launch with no arguments 24 seconds in opens nothing; the same launch at 33 seconds opens the list.
+  That is the settling period doing its job and the second-launch behaviour surviving it.
+
+`scripts/smoke-lifecycle.ps1` gained `startupLaunchStaysHidden` for the first of those and now waits out
+the settling period before the `listOpenedBySecondLaunch` step, which is what that check costs. A full run
+on the root build: 22 checks, all of them true, `loggedBytesDuringRun` = 0.
+
+**Not checked:** a real sign-in. The reproduction is of the second launch, not of the sign-in that
+produces it, so neither the fix nor the diagnosis has been confirmed across a reboot on this machine.
+Whether Windows' restore of a signed-out session uses the command line given to `RegisterApplicationRestart`
+is likewise unverified — the 30-second rule is there precisely because it may not. The Store build's
+startup task has not been exercised at all; it rests on the same rule.

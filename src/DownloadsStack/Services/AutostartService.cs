@@ -42,8 +42,15 @@ public sealed class AutostartService
         _packaged = runPath is null && approvedPath is null && HasPackageIdentity();
     }
 
+    /// <summary>
+    /// What marks a launch as Windows' doing rather than a person's. The startup entry carries it, and so
+    /// does the command line registered for a restart after an update, so neither of those launches opens
+    /// the list on a desktop nobody has touched yet.
+    /// </summary>
+    public const string Argument = "--autostart";
+
     /// <summary>Quoted: the path holds a space, and an unquoted one would be read as two arguments.</summary>
-    public static string CommandFor(string executable) => "\"" + executable + "\" --autostart";
+    public static string CommandFor(string executable) => "\"" + executable + "\" " + Argument;
 
     public AutostartState Read()
     {

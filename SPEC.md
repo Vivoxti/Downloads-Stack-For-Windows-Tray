@@ -336,3 +336,27 @@ The folder the wizard browses to is the parent of the application's own. Windows
 replaces the entire path with what is picked, so browsing to `D:\Tools` would install into `D:\Tools`
 itself; with the parent as the target, the application always lands in a `Downloads Stack` folder
 underneath whatever was chosen.
+
+### Nothing on screen at sign-in — 06.10.2026
+
+Reported by the user: with starting at sign-in switched on, booting or coming back from sleep brought the
+list up by itself, open and in an odd spot on the screen. Reproduced in one step — with the application
+running, launching it again with `--autostart` opened the flyout at 1166,587 — so the cause is not the
+startup launch itself but a second one.
+
+Sign-in runs this application twice. Its startup entry runs it, and Windows, with "restart apps after
+sign-in" on, separately restores what was running when the user signed out. Whichever arrives first
+becomes the instance; the other reaches it over the pipe and asks for the list, which is what a second
+launch has always meant. The odd spot follows from the same thing: a launch like that is treated as a
+click, so the flyout is placed at the pointer, which at sign-in is wherever it was left.
+
+A launch now has to look like a person's before it opens anything. The startup entry carries
+`--autostart`, and `RegisterApplicationRestart` hands Windows the same argument for the restart it may do
+after an update or a Restart Manager shutdown, so both are recognisable and both stay quiet. That leaves
+the package startup task of the Store build, which has no command line to mark: for it, and for anything
+else the shell may do at sign-in, a launch arriving within 30 seconds of the one already running is taken
+to be part of the same wave rather than somebody double-clicking a shortcut.
+
+Thirty seconds is a trade, and the cheaper side of one. A person who runs the application again in that
+first half-minute sees nothing and tries again; a window that opens by itself at sign-in is the complaint
+this started from.
