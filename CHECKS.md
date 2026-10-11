@@ -633,3 +633,37 @@ produces it, so neither the fix nor the diagnosis has been confirmed across a re
 Whether Windows' restore of a signed-out session uses the command line given to `RegisterApplicationRestart`
 is likewise unverified — the 30-second rule is there precisely because it may not. The Store build's
 startup task has not been exercised at all; it rests on the same rule.
+
+## The Store build's startup task no longer opens the list — 11.10.2026
+
+The cause was read out of Windows' event logs on the machine that showed it, for every sign-in from 04.10
+to 11.10: Shell-Core/Operational (9705–9708 for the `Run` key, 62408/62409 for a package startup task) and
+AppModel-Runtime/Admin (201, the packaged process). On 11.10:
+
+| Time | Launch | Command line | Outcome |
+|---|---|---|---|
+| 12:11:15 | Windows restoring the root build | `--autostart` | first, so the instance |
+| 12:11:36.7 | `Run` entry, root build | `--autostart` | quiet |
+| 12:11:45.8 | Store startup task | none | asked for the list, 30.5 s in |
+
+On 10.10 the startup task ran 60 s after the `Run` entry, which had kept the shell waiting its full 30 s.
+The `Run` entry of the root build is present in the user's registry but not visible from the shell these
+checks run in; it was read through WMI's `StdRegProv` instead.
+
+All 84 tests pass (51 s). The settling-period test is gone with the period; in its place, a launch flagged
+as the startup task asks for nothing whatever its command line, and asking outside a package returns false
+without throwing. `scripts/smoke-lifecycle.ps1` no longer waits half a minute before the second-launch step:
+22 checks, all true, the list opened by a launch 4 s after start, `loggedBytesDuringRun` = 0.
+
+The packaged path was checked with the Store package built under a throwaway identity
+(`Vivoderin.DownloadsStack.Check`), registered from its unpacked layout in Developer Mode and removed again:
+
+- Launched from its tile while the root build was running, it handed over and exited in 0.3 s, and the list
+  opened 4 s after the root build had started. A tile launch is still a person's.
+- Run inside the package, `--autostart-on` switched the package's startup task to enabled (state 2) and
+  `--autostart-off` back to 0, with the `Run` entry untouched both times: the cheaper package-identity check
+  still finds the package. Nothing was written to the package's `app.log`.
+
+**Not checked:** a real sign-in, and with it the startup-task activation itself — Windows offers no way to
+run a startup task outside one. That branch rests on the documented activation kind. Also unchecked: what
+command line Windows gives a packaged application it restores at sign-in.

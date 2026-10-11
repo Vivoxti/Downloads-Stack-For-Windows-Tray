@@ -50,6 +50,9 @@ internal static class NativeMethods
     /// </summary>
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     internal static extern int RegisterApplicationRestart(string? commandLine, uint flags);
+    /// <summary>APPMODEL_ERROR_NO_PACKAGE (15700) for a process without package identity.</summary>
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    internal static extern int GetCurrentPackageFullName(ref uint length, StringBuilder? name);
     [DllImport("user32.dll", EntryPoint = "PostMessageW")]
     [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool PostMessage(nint hwnd, uint message, nint wParam, nint lParam);
     [DllImport("user32.dll")] internal static extern bool GetCursorPos(out Point point);

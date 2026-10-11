@@ -360,3 +360,26 @@ to be part of the same wave rather than somebody double-clicking a shortcut.
 Thirty seconds is a trade, and the cheaper side of one. A person who runs the application again in that
 first half-minute sees nothing and tries again; a window that opens by itself at sign-in is the complaint
 this started from.
+
+### Nothing on screen at sign-in, again — 11.10.2026
+
+Reported by the user: 1.2.2 did not help, and the Store build still brought the list up by itself at
+sign-in. The account of the previous entry was wrong, and Windows' own logs say so. Shell-Core records
+every startup command it runs (9707, and 62408 for a package startup task) and AppModel-Runtime every
+packaged process it creates (201); the sign-ins from 04.10 to 11.10 all show the same pair of launches. What
+ran twice was two builds: the copy in the project root through its `Run` entry, with `--autostart`, and the
+Store build through its startup task, with nothing. They share the single-instance mutex, so the later one
+hands over to the earlier, and the startup task's bare launch looks exactly like a person clicking the
+Start menu tile. Restoring was not part of it before 1.2.2: Windows only restores a program that called
+`RegisterApplicationRestart`, which 1.2.2 was the first to do. From 1.2.2 on a Store-only machine can get
+a pair of its own — Windows restoring the application early, and the startup task after it.
+
+The thirty seconds could not have held. Windows starts the startup items one after another and waits up to
+thirty seconds on each before the next: on 10.10 the startup task ran 60 s after the `Run` entry, and on
+11.10, with 1.2.2 restored by Windows seven seconds after sign-in, it ran 30.5 s after that.
+
+The startup task is now recognised for what it is rather than by when it comes. A packaged process can ask
+Windows how it was activated (`AppInstance.GetActivatedEventArgs`), and a launch for the startup task
+reports `ActivationKind.StartupTask` where the tile reports `Launch`; such a launch asks the running
+instance for nothing. With every sign-in launch now marked, the settling period has nothing left to do and
+is gone, along with its cost: running the application again in its first half-minute opens the list.

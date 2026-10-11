@@ -1,6 +1,8 @@
 using System.IO;
+using DownloadsStack.Interop;
 using Microsoft.Win32;
 using Windows.ApplicationModel;
+using Windows.ApplicationModel.Activation;
 
 namespace DownloadsStack.Services;
 
@@ -44,8 +46,9 @@ public sealed class AutostartService
 
     /// <summary>
     /// What marks a launch as Windows' doing rather than a person's. The startup entry carries it, and so
-    /// does the command line registered for a restart after an update, so neither of those launches opens
-    /// the list on a desktop nobody has touched yet.
+    /// does the command line registered for a restart, so neither of those launches opens the list on a
+    /// desktop nobody has touched yet. The package startup task cannot carry it; see
+    /// <see cref="LaunchedByStartupTask"/>.
     /// </summary>
     public const string Argument = "--autostart";
 
@@ -106,10 +109,28 @@ public sealed class AutostartService
 
     public Task<bool> RepairAsync() => _packaged ? Task.FromResult(false) : Task.Run(Repair);
 
+    /// <summary>
+    /// Asked of the kernel rather than of <see cref="Package.Current"/>, which answers an unpackaged
+    /// process by throwing, after loading the whole WinRT projection to do it. A second launch asks this
+    /// on its way to the running instance, and a person is waiting for the list at the other end.
+    /// </summary>
     private static bool HasPackageIdentity()
     {
-        try { return Package.Current.Id is not null; }
-        catch (InvalidOperationException) { return false; }
+        var length = 0u;
+        return NativeMethods.GetCurrentPackageFullName(ref length, null) != 15700; // APPMODEL_ERROR_NO_PACKAGE
+    }
+
+    /// <summary>
+    /// Whether Windows ran this process for the package startup task. That launch has no command line to
+    /// carry <see cref="Argument"/>: it runs the same executable, with the same nothing after it, as the
+    /// Start menu does when a person clicks the tile. Only the activation Windows records for the process
+    /// tells the two apart, and it hands that over once, so this is asked once, by the launch itself.
+    /// </summary>
+    public static bool LaunchedByStartupTask()
+    {
+        if (!HasPackageIdentity()) return false;
+        try { return AppInstance.GetActivatedEventArgs()?.Kind == ActivationKind.StartupTask; }
+        catch (Exception ex) { LocalLog.Write("Activation", ex); return false; }
     }
 
     private static async Task<AutostartState> ReadPackagedAsync()

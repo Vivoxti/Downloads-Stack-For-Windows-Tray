@@ -59,12 +59,13 @@ internal sealed class SingleInstanceService : IDisposable
 
     /// <summary>
     /// What a second launch asks the instance that is already running to do — or nothing at all, when
-    /// Windows started it rather than a person. At sign-in this application is started more than once:
-    /// by its own startup entry, and by Windows restoring what was running when the user signed out.
-    /// Whichever of them gets there first, the other must not throw the list onto the screen.
+    /// Windows started it rather than a person. At sign-in this application can be started several times
+    /// over: by Windows restoring what was running when the user signed out, by the startup entry, and by
+    /// the package startup task, which a machine with both builds on it runs as well. Whichever of them
+    /// gets there first, the others must not throw the list onto the screen.
     /// </summary>
-    internal static InstanceCommand? SecondLaunchCommand(string[] args) =>
-        args.Contains(AutostartService.Argument) ? null
+    internal static InstanceCommand? SecondLaunchCommand(string[] args, bool startupTask) =>
+        startupTask || args.Contains(AutostartService.Argument) ? null
         : args.Contains("--keyboard") ? InstanceCommand.ShowKeyboard
         : InstanceCommand.ShowCursor;
 
