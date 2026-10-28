@@ -11,7 +11,7 @@ system tray, next to the clock, that opens a compact list of the newest files fr
 [![Get it from Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Get%20the%20app-0078D4?logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9MXTKMZQLJ6B)
 
 <p align="center">
-  <img src="docs/demo.gif" alt="The tray icon is clicked and a transparent list of recent files unfolds above the taskbar; a file is dragged out of it" width="440">
+  <img src="docs/demo.gif" alt="Downloads Stack in action: the tray icon opens a transparent list of recent files above the taskbar" width="720">
 </p>
 
 Windows 11 · .NET 10 · WPF · a self-contained build, with nothing to install beforehand.
