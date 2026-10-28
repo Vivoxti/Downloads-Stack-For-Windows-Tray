@@ -24,23 +24,8 @@ source folders; Downloads is connected by default.
 
 ## Install
 
-The signed, automatically updated version is available from the
-[Microsoft Store](https://apps.microsoft.com/detail/9MXTKMZQLJ6B).
-
-Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest). Both packages carry the same application – the only choice is how it gets onto the machine.
-
-| Package | File | What it does |
-| --- | --- | --- |
-| Installer | `DownloadsStack-<version>-win-x64.msi` | An ordinary wizard – welcome, licence, where to put it, install – for all users, into `C:\Program Files\Downloads Stack`. One UAC prompt. The folder can be changed, and whichever folder is picked gets a `Downloads Stack` subfolder inside it. Adds a Start menu shortcut, launches the application when it finishes, and is removed through Installed apps. |
-| Portable | `DownloadsStack-<version>-portable-win-x64.zip` | One executable inside. Unpack it anywhere and run `Downloads Stack.exe`. Nothing appears anywhere in the system until you turn on startup yourself. |
-
-The GitHub MSI and portable builds are not signed with a certificate, so SmartScreen can warn and Smart
-App Control can block them. The Microsoft Store build is certified and signed by Microsoft and does not
-have this limitation.
-
-If you want it without administrator rights, take the portable build: one executable, and nothing written outside the folder it sits in.
-
-Starting with Windows works the same way in both packages – a checkbox in the settings; see the section below.
+- **[Microsoft Store](https://apps.microsoft.com/detail/9MXTKMZQLJ6B)** – signed and updated automatically.
+- **[GitHub releases](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest)** – an MSI installer or a portable ZIP (one executable, no administrator rights). These builds are unsigned, so SmartScreen may warn about them.
 
 ## Running it
 
