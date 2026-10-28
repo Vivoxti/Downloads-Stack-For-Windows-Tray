@@ -1,4 +1,4 @@
-# Downloads Stack — a macOS Dock stack for the Windows tray
+# Downloads Stack – a macOS Dock stack for the Windows tray
 
 **An attempt to bring the macOS Dock's Downloads stack to Windows 11.** On a Mac, the Downloads folder sits
 in the Dock and fans open into the newest files. Windows has no such thing, so this is it: an icon in the
@@ -16,7 +16,7 @@ system tray, next to the clock, that opens a compact list of the newest files fr
 
 Windows 11 · .NET 10 · WPF · a self-contained build, with nothing to install beforehand.
 
-It is a list rather than a fan: no stack animation, no grid view, no Dock. What it borrows is the idea —
+It is a list rather than a fan: no stack animation, no grid view, no Dock. What it borrows is the idea –
 the newest downloads one click away, without opening File Explorer. The panel is fully transparent, so all
 you see are the system file icons and the file names. One click opens a file, dragging hands over a real
 Shell data object, a right click brings up the classic File Explorer context menu. There can be several
@@ -27,11 +27,11 @@ source folders; Downloads is connected by default.
 The signed, automatically updated version is available from the
 [Microsoft Store](https://apps.microsoft.com/detail/9MXTKMZQLJ6B).
 
-Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest). Both packages carry the same application — the only choice is how it gets onto the machine.
+Ready-made builds live on the [releases page](https://github.com/Vivoxti/Downloads-Stack-For-Windows-Tray/releases/latest). Both packages carry the same application – the only choice is how it gets onto the machine.
 
 | Package | File | What it does |
 | --- | --- | --- |
-| Installer | `DownloadsStack-<version>-win-x64.msi` | An ordinary wizard — welcome, licence, where to put it, install — for all users, into `C:\Program Files\Downloads Stack`. One UAC prompt. The folder can be changed, and whichever folder is picked gets a `Downloads Stack` subfolder inside it. Adds a Start menu shortcut, launches the application when it finishes, and is removed through Installed apps. |
+| Installer | `DownloadsStack-<version>-win-x64.msi` | An ordinary wizard – welcome, licence, where to put it, install – for all users, into `C:\Program Files\Downloads Stack`. One UAC prompt. The folder can be changed, and whichever folder is picked gets a `Downloads Stack` subfolder inside it. Adds a Start menu shortcut, launches the application when it finishes, and is removed through Installed apps. |
 | Portable | `DownloadsStack-<version>-portable-win-x64.zip` | One executable inside. Unpack it anywhere and run `Downloads Stack.exe`. Nothing appears anywhere in the system until you turn on startup yourself. |
 
 The GitHub MSI and portable builds are not signed with a certificate, so SmartScreen can warn and Smart
@@ -40,16 +40,16 @@ have this limitation.
 
 If you want it without administrator rights, take the portable build: one executable, and nothing written outside the folder it sits in.
 
-Starting with Windows works the same way in both packages — a checkbox in the settings; see the section below.
+Starting with Windows works the same way in both packages – a checkbox in the settings; see the section below.
 
 ## Running it
 
-Run `Downloads Stack.exe` — from the installed folder, from the unpacked archive, or from `artifacts/win-x64` after a local build. No window appears on the first run: the application lives in the tray. If Windows put the icon under the hidden-icons arrow, drag it out next to the clock. Pinning it to the main taskbar is not required.
+Run `Downloads Stack.exe` – from the installed folder, from the unpacked archive, or from `artifacts/win-x64` after a local build. No window appears on the first run: the application lives in the tray. If Windows put the icon under the hidden-icons arrow, drag it out next to the clock. Pinning it to the main taskbar is not required.
 
 - Left click on the icon shows and hides the list.
 - Escape, Alt+F4 and a click outside hide the list and leave the application running.
 - Right click on the icon opens the list, the folder settings and Exit.
-- Running the EXE again opens the list of the instance that is already running — unless the launch is Windows' own at sign-in. See "Starting with Windows".
+- Running the EXE again opens the list of the instance that is already running – unless the launch is Windows' own at sign-in. See "Starting with Windows".
 - `--show` opens the panel immediately on the first run (useful for checking).
 - `--quit`, `--autostart-on`, `--autostart-off` are windowless commands: stop the running instance, turn startup on and off. See "Starting with Windows".
 - Exit in the menu ends the process completely and removes the icon.
@@ -64,7 +64,7 @@ No title, no buttons, no scrolling: the newest files that fit, the newest at the
   <img src="docs/settings.png" alt="The settings window: the list of source folders, the sort order, the startup checkbox, and the sliders for how many files to show and how opaque the backdrop behind each name is" width="540">
 </p>
 
-A right click on the tray icon opens the settings — folders, sort order, how many files, backdrop opacity, startup, hardware acceleration — and everything but the last applies at once. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
+A right click on the tray icon opens the settings – folders, sort order, how many files, backdrop opacity, startup, hardware acceleration – and everything but the last applies at once. Settings and index live in `%LOCALAPPDATA%\DownloadsStack`.
 
 The tray icon is white while the list is closed and green while it is open.
 
@@ -74,39 +74,19 @@ The tray icon is white while the list is closed and green while it is open.
 
 ## Starting with Windows
 
-A "Start with Windows" checkbox in the settings, which writes the executable's path into `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` — no administrator rights, no service, no scheduled task, and the same switch turns up in Task Manager's Startup apps, where turning it off wins. In the Store build the same checkbox works the package's startup task instead.
-
-Starting with Windows puts the icon in the tray and nothing else on the screen. That takes some doing, because sign-in can start this application more than once: Windows restores it if it was running when the user signed out (with "restart apps" on in the sign-in options), the startup entry runs it, and on a machine with both builds the Store build's startup task runs as well. Whichever gets there first stays; the others find it already running, and what a second launch normally does — open the list — is exactly what nobody wants on a desktop they have not reached yet, least of all at wherever the pointer happens to be sitting.
-
-So a launch is only taken for a person's if it looks like one. The startup entry carries `--autostart`, and so does the command line Windows is given for restoring and restarting this application; neither ever asks for the list. The Store build's startup task has no command line to mark — it runs the executable exactly as the Start menu tile does — so the Store build asks Windows how it was activated instead, and a launch for the startup task asks for nothing either. When these launches come is no help: Windows starts the startup items one after another and waits up to half a minute on each, so they arrive anywhere from a second to more than a minute apart.
+The "Start with Windows" checkbox in the settings adds the app to `HKCU\...\Run` (no administrator rights); the Store build uses the package's startup task instead. Either way only the tray icon appears at sign-in – the list never opens on its own, even if Windows launches the app more than once.
 
 ## Building
 
-Windows 11 and the .NET SDK 10 are required. The self-contained build includes the runtime.
+Requires Windows 11 and the .NET 10 SDK.
 
 ```powershell
 dotnet test -c Release
 dotnet publish src/DownloadsStack/DownloadsStack.csproj -c Release -r win-x64 --self-contained true -p:PublishTrimmed=false -o artifacts/win-x64
 ```
 
-Publish runs crossgen (`PublishReadyToRun`), so it takes noticeably longer than an ordinary build; at application startup that saves most of the JIT work. WinForms is not used: the tray icon is registered through `Shell_NotifyIcon` directly.
+- `scripts/package.ps1` – the MSI installer (WiX 6, via `dotnet tool restore`) and the portable ZIP.
+- `scripts/package-store.ps1` – the unsigned MSIX for the Microsoft Store.
+- `scripts/smoke-lifecycle.ps1` – an end-to-end smoke test; see `CHECKS.md`.
 
-`scripts/package.ps1` builds the two release packages — the single-executable archive and the installer — running the tests first, which `-SkipTests` skips.
-
-`scripts/package-store.ps1` builds the unsigned x64 MSIX for Microsoft Store certification. Its defaults
-are the exact identity assigned to Downloads Stack in Partner Center, so a release build is simply:
-
-```powershell
-scripts/package-store.ps1
-```
-
-The output is `artifacts/DownloadsStack-<version>-store-win-x64.msix`. Upload that file on the submission's
-Packages page; it is intentionally unsigned because the Store signs it after certification. The MSIX uses
-Windows' package `StartupTask` rather than a versioned executable path in the Run registry key, so startup
-continues to work after Store updates. The public privacy statement is [`PRIVACY.md`](PRIVACY.md).
-
-The installer is built by WiX 6, wired up as a local tool of the repository: `dotnet tool restore` is its entire toolchain, and `package.ps1` does that itself. The package markup is `packaging/DownloadsStack.wxs`. The version number lives in one place, in `<Version>` in `src/DownloadsStack/DownloadsStack.csproj`: both the archive name and the installer's upgrade logic read it from there.
-
-`Theme.xaml` holds the shared styles. `TrayService` is the tray icon. `MainWindow` covers opening and closing, positioning and dragging. `DownloadsService` watches the folders. `ShellService` performs the Windows file operations.
-
-The checks and the limitations are in `CHECKS.md`. `scripts/smoke-lifecycle.ps1` was rewritten for tray mode: start without a window, delivery of a real click on the icon after re-registering with the shell, opening the list from a second launch, closing back into the tray, a single instance, the shortcut with its AppUserModel.ID, and no entries in `app.log` over the run. It also checks the installer's commands: that `--quit` really stops the process, that `--autostart-on` writes the expected line into `Run`, and that `--autostart-off` removes it. Whatever way the run ends, the script puts that line's previous value on the machine back.
+The version lives in `<Version>` in `src/DownloadsStack/DownloadsStack.csproj`. Privacy statement: [`PRIVACY.md`](PRIVACY.md).
